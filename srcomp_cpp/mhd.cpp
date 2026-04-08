@@ -29,6 +29,7 @@ namespace hydflux_mod {
    
 #pragma omp end declare target
 
+#if 0
 auto assoc = [&](void* host_ptr, size_t bytes, int dev) {
     void* dptr = omp_get_mapped_ptr(host_ptr, dev);
     if (!dptr) {
@@ -39,10 +40,12 @@ auto assoc = [&](void* host_ptr, size_t bytes, int dev) {
         std::fprintf(stderr, "omp_target_associate_ptr failed (%d)\n", r);
     }
 };
+#endif
 
 void AllocateHydroVariables(GridArray<double>& G,FieldArray<double>& U,FieldArray<double>& Fx,FieldArray<double>& Fy,FieldArray<double>& Fz,FieldArray<double>& P){
   
   int dev = omp_get_default_device();
+  (void)dev;
   
   G.allocate(ktot,jtot,itot);
   
@@ -392,6 +395,7 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
                + signbx*(byrst-bylst));
            vyldst = vylst*mins1 + temp;
            vyrdst = vyrst*mins1 + temp;
+	   (void)vyrdst;
            ryldst = rylst*mins1 + rolst * temp;
            ryrdst = ryrst*mins1 + rorst * temp;
 
@@ -399,6 +403,7 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
                + signbx*(bzrst-bzlst));
            vzldst = vzlst*mins1 + temp;
            vzrdst = vzrst*mins1 + temp;
+	   (void)vzrdst;
            rzldst = rzlst*mins1 + rolst * temp;
            rzrdst = rzrst*mins1 + rorst * temp;
 
@@ -432,6 +437,7 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
 
            temp = mslst-msl;
            temp1 = msrst-msr;
+	   (void)temp1;
 
            nflux[mden] = (frol+(rolst-rol)*msl)*maxs1
                         +(fror+(rorst-ror)*msr)*mins1;
@@ -1022,6 +1028,279 @@ void GetNumericalFlux3(const GridArray<double>&G,const FieldArray<double>& P,Fie
 	}// k-loop
   }// i,j-loop
 
+}
+
+void GetNumericalFluxD(
+		const int idir, 
+		const GridArray<double>  &G,
+		const FieldArray<double> &P,
+		FieldArray<double>       &F)
+{
+	double Pleftc1[nprim];
+	double Pleftc2[nprim];
+	double Prigtc1[nprim];
+	double Prigtc2[nprim];  
+
+	double numflux [mconsv];
+
+	double Clefte [2*mconsv+madd];
+	double Crigte [2*mconsv+madd];
+
+	auto CalcFlux = [&Pleftc1, &Pleftc2, &Prigtc1, &Prigtc2, &numflux, &Clefte, &Crigte](){
+		// Calculte Left state
+		double Plefte [nprim];
+		/* | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |  */
+		/*                     You are here                   */
+		for (int n=0; n<nprim; n++){
+			double dsvp =  Prigtc1[n]- Pleftc2[n];
+			double dsvm =              Pleftc2[n]- Pleftc1[n];
+			double dsv;
+			vanLeer(dsvp,dsvm,dsv);
+			Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
+		}
+
+		Clefte[mudn] = Plefte[nden]; // rho
+		Clefte[muvu] = Plefte[nve1]*Plefte[nden]; // rho v_x
+		Clefte[muvv] = Plefte[nve2]*Plefte[nden]; // rho v_y
+		Clefte[muvw] = Plefte[nve3]*Plefte[nden]; // rho v_z
+		Clefte[muet] = Plefte[nene]*Plefte[nden]  // e_i
+				+0.5e0*Plefte[nden]*(                  
+					+Plefte[nve1]*Plefte[nve1]                 
+					+Plefte[nve2]*Plefte[nve2]                 
+					+Plefte[nve3]*Plefte[nve3])  // + rho v^2/2
+				+0.5e0*             (                 
+					+Plefte[nbm1]*Plefte[nbm1]                 
+					+Plefte[nbm2]*Plefte[nbm2]                 
+					+Plefte[nbm3]*Plefte[nbm3]); // + B^2/2
+
+		Clefte[mubu] = Plefte[nbm1]; // b_x
+		Clefte[mubv] = Plefte[nbm2]; // b_y
+		Clefte[mubw] = Plefte[nbm3]; // b_z
+		Clefte[mubp] = Plefte[nbps]; // psi
+
+		for(int n=0; n<ncomp;n++){
+			Clefte[must+n] = Plefte[nden]*Plefte[nst+n]; // composition
+		}
+		// total pressure
+		double  ptl = Plefte[npre] + ( Plefte[nbm1]*Plefte[nbm1]
+				+Plefte[nbm2]*Plefte[nbm2]
+				+Plefte[nbm3]*Plefte[nbm3])/2.0e0;
+
+		Clefte[mfdn] = Plefte[nden]*Plefte[nve1];
+		Clefte[mfvu] = Plefte[nden]*Plefte[nve1]*Plefte[nve1] 
+				+ ptl-Plefte[nbm1]*Plefte[nbm1];
+		Clefte[mfvv] = Plefte[nden]*Plefte[nve2]*Plefte[nve1]
+				-Plefte[nbm2]*Plefte[nbm1];
+		Clefte[mfvw] = Plefte[nden]*Plefte[nve3]*Plefte[nve1]
+				-Plefte[nbm3]*Plefte[nbm1];
+		Clefte[mfet] = (Clefte[muet]+ptl)*Plefte[nve1]
+				-( Plefte[nbm1]*Plefte[nve1]
+					+Plefte[nbm2]*Plefte[nve2]
+					+Plefte[nbm3]*Plefte[nve3])*Plefte[nbm1];
+
+		Clefte[mfbu] =  0.0e0;
+		Clefte[mfbv] =  Plefte[nbm2]*Plefte[nve1]
+			-Plefte[nve2]*Plefte[nbm1];
+		Clefte[mfbw] =  Plefte[nbm3]*Plefte[nve1]
+			-Plefte[nve3]*Plefte[nbm1];
+		Clefte[mfbp] = 0.0e0;  // psi
+
+		for(int n=0; n<ncomp;n++){
+			Clefte[mfst+n] = Plefte[nden]*Plefte[nst+n]*Plefte[nve1]; // composition
+		}
+		double css = Plefte[ncsp]*Plefte[ncsp];
+		double cts =  css // c_s^2*c_a^2;
+		+ ( Plefte[nbm1]*Plefte[nbm1]  
+				+Plefte[nbm2]*Plefte[nbm2]  
+				+Plefte[nbm3]*Plefte[nbm3] )/Plefte[nden];
+
+		Clefte[mcsp] = sqrt((cts +sqrt(cts*cts
+					-4.0e0*css*Plefte[nbm1]*Plefte[nbm1] 
+					/Plefte[nden])   
+				    )/2.0e0);
+		Clefte[mvel] = Plefte[nve1];//direction dependent
+		Clefte[mpre] = ptl;
+
+		// Calculte Right state
+
+		/* | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |  */
+		/*                     You are here                   */
+		double Prigte [nprim];
+		for (int n=0; n<nprim; n++){
+			double dsvp =  Prigtc2[n]- Prigtc1[n];
+			double dsvm =              Prigtc1[n]- Pleftc2[n];
+			double dsv;
+			vanLeer(dsvp,dsvm,dsv);
+			Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
+		}
+
+		Crigte[mudn] = Prigte[nden]; // rho
+		Crigte[muvu] = Prigte[nve1]*Prigte[nden]; // rho v_x
+		Crigte[muvv] = Prigte[nve2]*Prigte[nden]; // rho v_y
+		Crigte[muvw] = Prigte[nve3]*Prigte[nden]; // rho v_z
+		Crigte[muet] = Prigte[nene]*Prigte[nden]  // e_i
+				+0.5e0*Prigte[nden]*(                  
+					+Prigte[nve1]*Prigte[nve1]                 
+					+Prigte[nve2]*Prigte[nve2]                 
+					+Prigte[nve3]*Prigte[nve3])  // + rho v^2/2
+				+0.5e0*             (                 
+					+Prigte[nbm1]*Prigte[nbm1]                 
+					+Prigte[nbm2]*Prigte[nbm2]                 
+					+Prigte[nbm3]*Prigte[nbm3]); // + B^2/2
+
+		Crigte[mubu] = Prigte[nbm1]; // b_x
+		Crigte[mubv] = Prigte[nbm2]; // b_y
+		Crigte[mubw] = Prigte[nbm3]; // b_z
+		Crigte[mubp] = Prigte[nbps]; // psi
+
+		for(int n=0; n<ncomp;n++){
+			Crigte[must+n] = Prigte[nden]*Prigte[nst+n]; // composition
+		}
+		// total pressure
+		ptl = Prigte[npre] + ( Prigte[nbm1]*Prigte[nbm1]
+			+Prigte[nbm2]*Prigte[nbm2]
+			+Prigte[nbm3]*Prigte[nbm3])/2.0e0;
+
+		Crigte[mfdn] = Prigte[nden]*Prigte[nve1];
+		Crigte[mfvu] = Prigte[nden]*Prigte[nve1]*Prigte[nve1] 
+				+ ptl-Prigte[nbm1]*Prigte[nbm1];
+		Crigte[mfvv] = Prigte[nden]*Prigte[nve2]*Prigte[nve1]
+				-Prigte[nbm2]*Prigte[nbm1];
+		Crigte[mfvw] = Prigte[nden]*Prigte[nve3]*Prigte[nve1]
+				-Prigte[nbm3]*Prigte[nbm1];
+		Crigte[mfet] = (Crigte[muet]+ptl)*Prigte[nve1]
+				-( Prigte[nbm1]*Prigte[nve1]
+					+Prigte[nbm2]*Prigte[nve2]
+					+Prigte[nbm3]*Prigte[nve3])*Prigte[nbm1];
+
+		Crigte[mfbu] =  0.0e0;
+		Crigte[mfbv] =  Prigte[nbm2]*Prigte[nve1]
+				-Prigte[nve2]*Prigte[nbm1];
+		Crigte[mfbw] =  Prigte[nbm3]*Prigte[nve1]
+				-Prigte[nve3]*Prigte[nbm1];
+		Crigte[mfbp] = 0.0e0;  // psi
+
+		for(int n=0; n<ncomp;n++){
+			Crigte[mfst+n] = Prigte[nden]*Prigte[nst+n]*Prigte[nve1]; // composition
+		}
+		css = Prigte[ncsp]*Prigte[ncsp];
+		cts =  css // c_s^2*c_a^2;
+			+ ( Prigte[nbm1]*Prigte[nbm1]  
+				+Prigte[nbm2]*Prigte[nbm2]  
+				+Prigte[nbm3]*Prigte[nbm3] )/Prigte[nden];
+
+		Crigte[mcsp] = sqrt((cts +sqrt(cts*cts
+					-4.0e0*css*Prigte[nbm1]*Prigte[nbm1] 
+					/Prigte[nden])   
+				    )/2.0e0);
+		Crigte[mvel] = Prigte[nve1]; //direction dependent
+		Crigte[mpre] = ptl;
+		//Calculate flux
+		//if(i==is)printf("Cleft: %e %e %e %e\n",Clefte[mden],Clefte[mrvu],Clefte[meto],Clefte[mubp]);
+
+		HLLD(Clefte,Crigte,numflux);
+	};
+
+	if(1 == idir){
+#pragma omp target teams distribute parallel for collapse(3)
+		for (int k=ks; k<=ke; k++) {
+			for (int j=js; j<=je; j++){
+				for (int i=is; i<=ie+1; i++) {
+					for (int n=0; n<nprim; n++){
+						Pleftc1[n] = P(n,k,j,i-2);
+						Pleftc2[n] = P(n,k,j,i-1);
+						Prigtc1[n] = P(n,k,j,i  );
+						Prigtc2[n] = P(n,k,j,i+1);
+					}
+					CalcFlux();
+
+					F(mden,k,j,i) = numflux[mden];
+					F(mrv1,k,j,i) = numflux[mrvu];
+					F(mrv2,k,j,i) = numflux[mrvv];
+					F(mrv3,k,j,i) = numflux[mrvw];
+					F(meto,k,j,i) = numflux[meto];
+					//F(mbm1,k,j,i) = numflux[mbmu];
+					F(mbm2,k,j,i) = numflux[mbmv];
+					F(mbm3,k,j,i) = numflux[mbmw];
+
+					F(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+					               -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
+					F(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+					               -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
+					for(int n=0; n<ncomp;n++){
+						F(mst+n,k,j,i) = numflux[mst+n]; // composition
+					}
+				}
+			}
+		}
+	}
+
+	if(2 == idir){
+#pragma omp target teams distribute parallel for collapse(3)
+		for(int k=ks; k<=ke; k++){
+			for(int i=is; i<=ie; i++){
+				for(int j=js; j<=je+1; j++){
+					for (int n=0; n<nprim; n++){
+						Pleftc1[n] = P(n,k,j-2,i);
+						Pleftc2[n] = P(n,k,j-1,i);
+						Prigtc1[n] = P(n,k,j  ,i);
+						Prigtc2[n] = P(n,k,j+1,i);
+					}
+					CalcFlux();
+
+					F(mden,k,j,i) = numflux[mden];
+					F(mrv1,k,j,i) = numflux[mrvw];
+					F(mrv2,k,j,i) = numflux[mrvu];
+					F(mrv3,k,j,i) = numflux[mrvv];
+					F(meto,k,j,i) = numflux[meto];
+					F(mbm1,k,j,i) = numflux[mbmw];
+					//F(mbm2,k,j,i) = numflux[mbmu];
+					F(mbm3,k,j,i) = numflux[mbmv];
+
+					F(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+					               -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
+					F(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+					               -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
+					for(int n=0; n<ncomp;n++){
+						F(mst+n,k,j,i) = numflux[mst+n]; // composition
+					}
+				}
+			}
+		}
+	}
+
+	if(3 == idir){
+		for(int j=js; j<=je; ++j){
+			for(int i=is; i<=ie; ++i){
+				for(int k=ks; k<=ke+1; ++k){
+					for (int n=0; n<nprim; n++){
+						Pleftc1[n] = P(n,k-2,j,i);
+						Pleftc2[n] = P(n,k-1,j,i);
+						Prigtc1[n] = P(n,k  ,j,i);
+						Prigtc2[n] = P(n,k+1,j,i);
+					}
+					CalcFlux();
+
+					F(mden,k,j,i) = numflux[mden];
+					F(mrv1,k,j,i) = numflux[mrvv];
+					F(mrv2,k,j,i) = numflux[mrvw];
+					F(mrv3,k,j,i) = numflux[mrvu];
+					F(meto,k,j,i) = numflux[meto];
+					F(mbm1,k,j,i) = numflux[mbmv];
+					F(mbm2,k,j,i) = numflux[mbmw];
+					//Fz(mbm3,k,j,i) = numflux[mbm];
+
+					F(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+					                -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
+					F(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+					               -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
+					for(int n=0; n<ncomp;n++){
+						F(mst+n,k,j,i) = numflux[mst+n]; // composition
+					}
+				}
+			}
+		}
+	}
 }
 
 void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,const FieldArray<double>& Fy,const FieldArray<double>& Fz,FieldArray<double>& U){
