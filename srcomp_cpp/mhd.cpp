@@ -700,7 +700,7 @@ void GetNumericalFlux2(const GridArray<double>&G,const FieldArray<double>& P,Fie
 	Clefte[mubu] = Plefte[nbm2]; // b_y
 	Clefte[mubv] = Plefte[nbm3]; // b_z
 	Clefte[mubp] = Plefte[nbps]; // psi
-	for(int n=0; n<ncomp;n++){
+	for(int n=0; n<ncomp; n++){
 	  Clefte[must+n] = Plefte[nden]*Plefte[nst+n]; // composition
 	}
 	
@@ -727,7 +727,7 @@ void GetNumericalFlux2(const GridArray<double>&G,const FieldArray<double>& P,Fie
 	              - Plefte[nve3]*Plefte[nbm2];
 	Clefte[mfbp] = 0.0e0;  // psi
 	
-	for(int n=0; n<ncomp;n++){
+	for(int n=0; n<ncomp; n++){
 	  Clefte[mfst+n] = Plefte[nden]*Plefte[nst+n]*Plefte[nve2]; // composition
 	}
 	double css = Plefte[ncsp]*Plefte[ncsp];
@@ -1046,7 +1046,71 @@ void GetNumericalFluxD(
 	double Clefte [2*mconsv+madd];
 	double Crigte [2*mconsv+madd];
 
-	auto CalcFlux = [&Pleftc1, &Pleftc2, &Prigtc1, &Prigtc2, &numflux, &Clefte, &Crigte](){
+	auto Prim2Cons = [] (const double (&Prim)[nprim], double (&Cons)[2*mconsv+madd]){
+		Cons[mudn] = Prim[nden]; // rho
+		Cons[muvu] = Prim[nve1]*Prim[nden]; // rho v_x
+		Cons[muvv] = Prim[nve2]*Prim[nden]; // rho v_y
+		Cons[muvw] = Prim[nve3]*Prim[nden]; // rho v_z
+		Cons[muet] = Prim[nene]*Prim[nden]  // e_i
+			+0.5e0*Prim[nden]*(                  
+				+Prim[nve1]*Prim[nve1]                 
+				+Prim[nve2]*Prim[nve2]                 
+				+Prim[nve3]*Prim[nve3])  // + rho v^2/2
+			+0.5e0*             (                 
+				+Prim[nbm1]*Prim[nbm1]                 
+				+Prim[nbm2]*Prim[nbm2]                 
+				+Prim[nbm3]*Prim[nbm3]); // + B^2/2
+
+		Cons[mubu] = Prim[nbm1]; // b_x
+		Cons[mubv] = Prim[nbm2]; // b_y
+		Cons[mubw] = Prim[nbm3]; // b_z
+		Cons[mubp] = Prim[nbps]; // psi
+
+		for(int n=0; n<ncomp;n++){
+			Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
+		}
+		// total pressure
+		double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
+				+Prim[nbm2]*Prim[nbm2]
+				+Prim[nbm3]*Prim[nbm3])/2.0e0;
+
+		Cons[mfdn] = Prim[nden]*Prim[nve1];
+		Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nve1] 
+				+ ptl-Prim[nbm1]*Prim[nbm1];
+		Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nve1]
+				-Prim[nbm2]*Prim[nbm1];
+		Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nve1]
+				-Prim[nbm3]*Prim[nbm1];
+		Cons[mfet] = (Cons[muet]+ptl)*Prim[nve1]
+				-( Prim[nbm1]*Prim[nve1]
+					+Prim[nbm2]*Prim[nve2]
+					+Prim[nbm3]*Prim[nve3])*Prim[nbm1];
+
+		Cons[mfbu] =  0.0e0;
+		Cons[mfbv] =  Prim[nbm2]*Prim[nve1]
+				-Prim[nve2]*Prim[nbm1];
+		Cons[mfbw] =  Prim[nbm3]*Prim[nve1]
+				-Prim[nve3]*Prim[nbm1];
+		Cons[mfbp] = 0.0e0;  // psi
+
+		for(int n=0; n<ncomp;n++){
+			Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve1]; // composition
+		}
+		double css = Prim[ncsp]*Prim[ncsp];
+		double cts =  css // c_s^2*c_a^2;
+				+ ( Prim[nbm1]*Prim[nbm1]  
+					+Prim[nbm2]*Prim[nbm2]  
+					+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
+
+		Cons[mcsp] = sqrt((cts +sqrt(cts*cts
+						-4.0e0*css*Prim[nbm1]*Prim[nbm1] 
+						/Prim[nden])   
+				    )/2.0e0);
+		Cons[mvel] = Prim[nve1];//direction dependent
+		Cons[mpre] = ptl;
+	};
+
+	auto CalcFlux = [&Pleftc1, &Pleftc2, &Prigtc1, &Prigtc2, &numflux, &Clefte, &Crigte, &Prim2Cons](){
 		// Calculte Left state
 		double Plefte [nprim];
 		/* | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |  */
@@ -1058,74 +1122,13 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
 		}
-
-		Clefte[mudn] = Plefte[nden]; // rho
-		Clefte[muvu] = Plefte[nve1]*Plefte[nden]; // rho v_x
-		Clefte[muvv] = Plefte[nve2]*Plefte[nden]; // rho v_y
-		Clefte[muvw] = Plefte[nve3]*Plefte[nden]; // rho v_z
-		Clefte[muet] = Plefte[nene]*Plefte[nden]  // e_i
-				+0.5e0*Plefte[nden]*(                  
-					+Plefte[nve1]*Plefte[nve1]                 
-					+Plefte[nve2]*Plefte[nve2]                 
-					+Plefte[nve3]*Plefte[nve3])  // + rho v^2/2
-				+0.5e0*             (                 
-					+Plefte[nbm1]*Plefte[nbm1]                 
-					+Plefte[nbm2]*Plefte[nbm2]                 
-					+Plefte[nbm3]*Plefte[nbm3]); // + B^2/2
-
-		Clefte[mubu] = Plefte[nbm1]; // b_x
-		Clefte[mubv] = Plefte[nbm2]; // b_y
-		Clefte[mubw] = Plefte[nbm3]; // b_z
-		Clefte[mubp] = Plefte[nbps]; // psi
-
-		for(int n=0; n<ncomp;n++){
-			Clefte[must+n] = Plefte[nden]*Plefte[nst+n]; // composition
-		}
-		// total pressure
-		double  ptl = Plefte[npre] + ( Plefte[nbm1]*Plefte[nbm1]
-				+Plefte[nbm2]*Plefte[nbm2]
-				+Plefte[nbm3]*Plefte[nbm3])/2.0e0;
-
-		Clefte[mfdn] = Plefte[nden]*Plefte[nve1];
-		Clefte[mfvu] = Plefte[nden]*Plefte[nve1]*Plefte[nve1] 
-				+ ptl-Plefte[nbm1]*Plefte[nbm1];
-		Clefte[mfvv] = Plefte[nden]*Plefte[nve2]*Plefte[nve1]
-				-Plefte[nbm2]*Plefte[nbm1];
-		Clefte[mfvw] = Plefte[nden]*Plefte[nve3]*Plefte[nve1]
-				-Plefte[nbm3]*Plefte[nbm1];
-		Clefte[mfet] = (Clefte[muet]+ptl)*Plefte[nve1]
-				-( Plefte[nbm1]*Plefte[nve1]
-					+Plefte[nbm2]*Plefte[nve2]
-					+Plefte[nbm3]*Plefte[nve3])*Plefte[nbm1];
-
-		Clefte[mfbu] =  0.0e0;
-		Clefte[mfbv] =  Plefte[nbm2]*Plefte[nve1]
-			-Plefte[nve2]*Plefte[nbm1];
-		Clefte[mfbw] =  Plefte[nbm3]*Plefte[nve1]
-			-Plefte[nve3]*Plefte[nbm1];
-		Clefte[mfbp] = 0.0e0;  // psi
-
-		for(int n=0; n<ncomp;n++){
-			Clefte[mfst+n] = Plefte[nden]*Plefte[nst+n]*Plefte[nve1]; // composition
-		}
-		double css = Plefte[ncsp]*Plefte[ncsp];
-		double cts =  css // c_s^2*c_a^2;
-		+ ( Plefte[nbm1]*Plefte[nbm1]  
-				+Plefte[nbm2]*Plefte[nbm2]  
-				+Plefte[nbm3]*Plefte[nbm3] )/Plefte[nden];
-
-		Clefte[mcsp] = sqrt((cts +sqrt(cts*cts
-					-4.0e0*css*Plefte[nbm1]*Plefte[nbm1] 
-					/Plefte[nden])   
-				    )/2.0e0);
-		Clefte[mvel] = Plefte[nve1];//direction dependent
-		Clefte[mpre] = ptl;
+		Prim2Cons(Plefte, Clefte);
 
 		// Calculte Right state
 
+		double Prigte [nprim];
 		/* | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |  */
 		/*                     You are here                   */
-		double Prigte [nprim];
 		for (int n=0; n<nprim; n++){
 			double dsvp =  Prigtc2[n]- Prigtc1[n];
 			double dsvm =              Prigtc1[n]- Pleftc2[n];
@@ -1133,72 +1136,9 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
 		}
+		Prim2Cons(Prigte, Crigte);
 
-		Crigte[mudn] = Prigte[nden]; // rho
-		Crigte[muvu] = Prigte[nve1]*Prigte[nden]; // rho v_x
-		Crigte[muvv] = Prigte[nve2]*Prigte[nden]; // rho v_y
-		Crigte[muvw] = Prigte[nve3]*Prigte[nden]; // rho v_z
-		Crigte[muet] = Prigte[nene]*Prigte[nden]  // e_i
-				+0.5e0*Prigte[nden]*(                  
-					+Prigte[nve1]*Prigte[nve1]                 
-					+Prigte[nve2]*Prigte[nve2]                 
-					+Prigte[nve3]*Prigte[nve3])  // + rho v^2/2
-				+0.5e0*             (                 
-					+Prigte[nbm1]*Prigte[nbm1]                 
-					+Prigte[nbm2]*Prigte[nbm2]                 
-					+Prigte[nbm3]*Prigte[nbm3]); // + B^2/2
-
-		Crigte[mubu] = Prigte[nbm1]; // b_x
-		Crigte[mubv] = Prigte[nbm2]; // b_y
-		Crigte[mubw] = Prigte[nbm3]; // b_z
-		Crigte[mubp] = Prigte[nbps]; // psi
-
-		for(int n=0; n<ncomp;n++){
-			Crigte[must+n] = Prigte[nden]*Prigte[nst+n]; // composition
-		}
-		// total pressure
-		ptl = Prigte[npre] + ( Prigte[nbm1]*Prigte[nbm1]
-			+Prigte[nbm2]*Prigte[nbm2]
-			+Prigte[nbm3]*Prigte[nbm3])/2.0e0;
-
-		Crigte[mfdn] = Prigte[nden]*Prigte[nve1];
-		Crigte[mfvu] = Prigte[nden]*Prigte[nve1]*Prigte[nve1] 
-				+ ptl-Prigte[nbm1]*Prigte[nbm1];
-		Crigte[mfvv] = Prigte[nden]*Prigte[nve2]*Prigte[nve1]
-				-Prigte[nbm2]*Prigte[nbm1];
-		Crigte[mfvw] = Prigte[nden]*Prigte[nve3]*Prigte[nve1]
-				-Prigte[nbm3]*Prigte[nbm1];
-		Crigte[mfet] = (Crigte[muet]+ptl)*Prigte[nve1]
-				-( Prigte[nbm1]*Prigte[nve1]
-					+Prigte[nbm2]*Prigte[nve2]
-					+Prigte[nbm3]*Prigte[nve3])*Prigte[nbm1];
-
-		Crigte[mfbu] =  0.0e0;
-		Crigte[mfbv] =  Prigte[nbm2]*Prigte[nve1]
-				-Prigte[nve2]*Prigte[nbm1];
-		Crigte[mfbw] =  Prigte[nbm3]*Prigte[nve1]
-				-Prigte[nve3]*Prigte[nbm1];
-		Crigte[mfbp] = 0.0e0;  // psi
-
-		for(int n=0; n<ncomp;n++){
-			Crigte[mfst+n] = Prigte[nden]*Prigte[nst+n]*Prigte[nve1]; // composition
-		}
-		css = Prigte[ncsp]*Prigte[ncsp];
-		cts =  css // c_s^2*c_a^2;
-			+ ( Prigte[nbm1]*Prigte[nbm1]  
-				+Prigte[nbm2]*Prigte[nbm2]  
-				+Prigte[nbm3]*Prigte[nbm3] )/Prigte[nden];
-
-		Crigte[mcsp] = sqrt((cts +sqrt(cts*cts
-					-4.0e0*css*Prigte[nbm1]*Prigte[nbm1] 
-					/Prigte[nden])   
-				    )/2.0e0);
-		Crigte[mvel] = Prigte[nve1]; //direction dependent
-		Crigte[mpre] = ptl;
-		//Calculate flux
-		//if(i==is)printf("Cleft: %e %e %e %e\n",Clefte[mden],Clefte[mrvu],Clefte[meto],Clefte[mubp]);
-
-		HLLD(Clefte,Crigte,numflux);
+		HLLD(Clefte, Crigte, numflux);
 	};
 
 	if(1 == idir){
