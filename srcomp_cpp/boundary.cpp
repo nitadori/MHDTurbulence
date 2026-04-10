@@ -34,6 +34,7 @@ namespace boundary_mod {
   BoundaryArray<double> Bs,Br;
 #pragma omp end declare target 
 
+#if 0
 auto assocb = [&](void* host_ptr, size_t bytes, int dev) {
     void* dptr = omp_get_mapped_ptr(host_ptr, dev);
     if (!dptr) {
@@ -44,6 +45,7 @@ auto assocb = [&](void* host_ptr, size_t bytes, int dev) {
         std::fprintf(stderr, "omp_target_associate_ptr failed (%d)\n", r);
     }
 };
+#endif
 
 void AllocateBoundaryVariables(BoundaryArray<double>& Bs,BoundaryArray<double>& Br){
   using namespace resolution_mod;

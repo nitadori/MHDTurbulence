@@ -91,7 +91,7 @@ namespace mpi_dataio_mod {
       std::fprintf(stderr, "open failed: %s : %s\n", fname, std::strerror(errno));
       return;
     }
-    std::fprintf(fp, "# %.17g %.17g\n", time, dt);
+    std::fprintf(fp, "# %.17g %.17g\n", time_sim, dt);
     std::fprintf(fp, "# %d \n", ntotal[dir1]);
     std::fprintf(fp, "# %d \n", ntotal[dir2]);
     std::fprintf(fp, "# %d \n", ntotal[dir3]);

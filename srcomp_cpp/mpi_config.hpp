@@ -33,6 +33,7 @@ namespace mpi_config_mod {
   // GPU info
   extern int gpuid, ngpus;
 
+void FinalizeMPI();
 void InitializeMPI();  // init world, split, create Cartesian, select GPU
 
 void MPIminfind(const double& vin,const int& locin, double& vout, int& locout);

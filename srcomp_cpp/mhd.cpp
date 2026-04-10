@@ -1070,7 +1070,8 @@ void GetNumericalFluxD(
 			Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
 		}
 		// total pressure
-		double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
+		double  ptl = Prim[npre] + (
+			       	 Prim[nbm1]*Prim[nbm1]
 				+Prim[nbm2]*Prim[nbm2]
 				+Prim[nbm3]*Prim[nbm3])/2.0e0;
 

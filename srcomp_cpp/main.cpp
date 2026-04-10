@@ -257,5 +257,8 @@ int main() {
   //if (!nooutput) Output1D(forceoutput);
   
   if (myid_w == 0) printf("program has been finished\n");
+
+  FinalizeMPI();
+
   return 0;
 }

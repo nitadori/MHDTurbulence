@@ -33,6 +33,9 @@ namespace mpi_config_mod {
 
   // ---- Initialize MPI world, split communicator, create 3D Cartesian topology ---
 
+void FinalizeMPI(){
+	MPI_Finalize();
+}
 
 void InitializeMPI() {
   MPI_Init(nullptr, nullptr);
