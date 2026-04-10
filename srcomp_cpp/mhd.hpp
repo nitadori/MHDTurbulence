@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <algorithm>
 
+#include <Kokkos_Core.hpp>
+
 namespace hydflux_mod {
   using index_t = int;     // 必要なら 32/64 を切り替え
   using size_t  = std::size_t;
@@ -92,6 +94,9 @@ namespace hydflux_mod {
     inline  T& operator()(int n, int k, int j, int i)  noexcept {
       return data[((n*n3 + k)*n2 + j)*n1 + i];
     }
+
+    using Dview = Kokkos::View<double****>;
+    using Hview = Dview::HostMirror;
   };
 
   inline constexpr int ncomp{1}; //! composition
