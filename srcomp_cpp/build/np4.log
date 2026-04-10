@@ -1,0 +1,16 @@
+MPI process= 4
+decomposition= 2 2 1
+init myid_w,gpuid=(1,-1)
+init myid_w,gpuid=(2,-1)
+init myid_w,gpuid=(3,-1)
+num of GPUs = 0
+init myid_w,gpuid=(0,-1)
+setup grids and fields
+grid size for x y z = 150 150 150
+output index=0, time=0.000000e+00 
+entering main loop
+exiting main loop time=5.000000e+88, step=0
+sim time [s]: 1.113775e+00
+time/count/cell : 2.200048e-12
+output index=1, time=5.000000e+88 
+program has been finished
