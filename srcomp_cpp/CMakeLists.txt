@@ -23,3 +23,12 @@ target_link_libraries(Simulation.x PRIVATE MPI::MPI_CXX)
 
 find_package(OpenMP REQUIRED)
 target_link_libraries(Simulation.x PRIVATE OpenMP::OpenMP_CXX)
+
+include(FetchContent)
+FetchContent_Declare(
+  Kokkos
+  URL https://github.com/kokkos/kokkos/archive/refs/tags/4.7.03.zip
+)
+FetchContent_MakeAvailable(Kokkos)
+
+target_link_libraries(Simulation.x PRIVATE Kokkos::kokkos)

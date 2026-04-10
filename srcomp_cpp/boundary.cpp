@@ -51,6 +51,7 @@ void AllocateBoundaryVariables(BoundaryArray<double>& Bs,BoundaryArray<double>& 
   using namespace resolution_mod;
 
   int dev = omp_get_default_device();
+  (void)dev;
   
   // buffer for send
   Bs.allocate(nprim ,ngh,ktot,jtot,itot);
@@ -162,6 +163,8 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
   const int dev = omp_get_default_device();
   int rc;
   int nreq = 0;
+
+  (void)dev, (void)rc;
 
   // ---- X direction ----
   if (ntiles[dir1] == 1) {
