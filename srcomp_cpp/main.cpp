@@ -241,20 +241,12 @@ int main(int argc, char **argv) {
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
     // puts("SetBoundaryCondition");
     SetBoundaryCondition(P,Bs,Br);
-    // puts("EvaluateCh");
     EvaluateCh();
-    // puts("GetNumericalFlux1");
     GetNumericalFlux1(G,P,Fx);
-    // puts("GetNumericalFlux2");
     GetNumericalFlux2(G,P,Fy);
-    // puts("GetNumericalFlux3");
     GetNumericalFlux3(G,P,Fz);
-    // puts("UpdateConservU");
-    UpdateConservU(G,Fx,Fy,Fz,U);
-    // puts("DampPsi");
     UpdateConservU(G,Fx,Fy,Fz,U);
     DampPsi(G,U);
-    // puts("UpdatePrimitvP");
     UpdatePrimitvP(U,P);
 
     time_sim += dt;
