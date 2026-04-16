@@ -242,7 +242,11 @@ int main(int argc, char **argv) {
     // puts("SetBoundaryCondition");
     SetBoundaryCondition(P,Bs,Br);
     EvaluateCh();
+#if 0
     GetNumericalFlux1(G,P,Fx);
+#else
+    GetNumericalFluxD(1, G,P,Fx);
+#endif
     GetNumericalFlux2(G,P,Fy);
     GetNumericalFlux3(G,P,Fz);
     UpdateConservU(G,Fx,Fy,Fz,U);

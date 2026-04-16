@@ -1085,11 +1085,11 @@ void GetNumericalFluxD(
 
 		Cons[mfdn] = Prim[nden]*Prim[nve1];
 		Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nve1] 
-				+ ptl-Prim[nbm1]*Prim[nbm1];
+		                  + ptl-Prim[nbm1]*Prim[nbm1];
 		Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nve1]
-				-Prim[nbm2]*Prim[nbm1];
+		                      - Prim[nbm2]*Prim[nbm1];
 		Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nve1]
-				-Prim[nbm3]*Prim[nbm1];
+		                      - Prim[nbm3]*Prim[nbm1];
 		Cons[mfet] = (Cons[muet]+ptl)*Prim[nve1]
 				-( Prim[nbm1]*Prim[nve1]
 					+Prim[nbm2]*Prim[nve2]
@@ -1097,9 +1097,9 @@ void GetNumericalFluxD(
 
 		Cons[mfbu] =  0.0e0;
 		Cons[mfbv] =  Prim[nbm2]*Prim[nve1]
-				-Prim[nve2]*Prim[nbm1];
+	i                    -Prim[nve2]*Prim[nbm1];
 		Cons[mfbw] =  Prim[nbm3]*Prim[nve1]
-				-Prim[nve3]*Prim[nbm1];
+		             -Prim[nve3]*Prim[nbm1];
 		Cons[mfbp] = 0.0e0;  // psi
 
 		for(int n=0; n<ncomp;n++){
