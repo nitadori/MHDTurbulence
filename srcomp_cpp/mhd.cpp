@@ -18,7 +18,7 @@
 using namespace resolution_mod;
 
 namespace hydflux_mod {
-#pragma omp declare target
+// #pragma omp declare target
   GridArray<double> G;
   FieldArray<double> U; //! U(mconsv,ktot,jtot,itot)
   FieldArray<double> Fx,Fy,Fz;
@@ -27,7 +27,7 @@ namespace hydflux_mod {
   double gam = 1.4;// adiabatic
   //  double csiso; // isothermal
    
-#pragma omp end declare target
+// #pragma omp end declare target
 
 #if 0
 auto assoc = [&](void* host_ptr, size_t bytes, int dev) {
@@ -62,10 +62,12 @@ void AllocateHydroVariables(GridArray<double>& G,FieldArray<double>& U,FieldArra
     G.x3b(k) = 0.0;
   }
   
+#if 0
 #pragma omp target update to (G.n1, G.n2, G.n3)
 #pragma omp target enter data map (alloc: G.x1a_data[0:G.n1],G.x1b_data[0:G.n1])
 #pragma omp target enter data map (alloc: G.x2a_data[0:G.n2],G.x2b_data[0:G.n2])
 #pragma omp target enter data map (alloc: G.x3a_data[0:G.n3],G.x3b_data[0:G.n3])
+#endif
   /*
   assoc(G.x1a_data, sizeof(double)*G.n1,dev);
   assoc(G.x1b_data, sizeof(double)*G.n1,dev);
@@ -81,11 +83,13 @@ void AllocateHydroVariables(GridArray<double>& G,FieldArray<double>& U,FieldArra
   Fy.allocate(mconsv,ktot,jtot,itot);
   Fz.allocate(mconsv,ktot,jtot,itot);
 
+#if 0
 #pragma omp target enter data map (alloc: U.data[0: U.size])
 #pragma omp target enter data map (alloc:Fx.data[0:Fx.size])
 #pragma omp target enter data map (alloc:Fy.data[0:Fy.size])
 #pragma omp target enter data map (alloc:Fz.data[0:Fz.size])
 #pragma omp target enter data map (alloc: P.data[0: P.size])
+#endif
   /*
   assoc( U.data, sizeof(double)* U.size,dev);
   assoc(Fx.data, sizeof(double)*Fx.size,dev);
@@ -110,22 +114,26 @@ void AllocateHydroVariables(GridArray<double>& G,FieldArray<double>& U,FieldArra
 	  P(n,k,j,i) = 0.0;
   }
   
+#if 0
 #pragma omp target update to ( U.data[0: U.size], U.n1, U.n2, U.n3, U.nv)
 #pragma omp target update to (Fx.data[0:Fx.size],Fx.n1,Fx.n2,Fx.n3,Fx.nv)
 #pragma omp target update to (Fy.data[0:Fy.size],Fy.n1,Fy.n2,Fy.n3,Fy.nv)
 #pragma omp target update to (Fz.data[0:Fz.size],Fz.n1,Fz.n2,Fz.n3,Fz.nv)
 #pragma omp target update to ( P.data[0: P.size], P.n1, P.n2, P.n3, P.nv)
+#endif
 
 }
 
 void DeallocateHydroVariables(GridArray<double>& G,FieldArray<double>& U,FieldArray<double>& Fx,FieldArray<double>& Fy,FieldArray<double>& Fz,FieldArray<double>& P){
 
+#if 0
 #pragma omp target exit data map (delete: G.x1a_data[0:G.n1],G.x1b_data[0:G.n1],G.x2a_data[0:G.n2],G.x2b_data[0:G.n2],G.x3a_data[0:G.n3],G.x3b_data[0:G.n3])
 #pragma omp target exit data map (delete: U.data[0: U.size], U.n1, U.n2, U.n3, U.nv)
 #pragma omp target exit data map (delete:Fx.data[0:Fx.size],Fx.n1,Fx.n2,Fx.n3,Fx.nv)
 #pragma omp target exit data map (delete:Fy.data[0:Fy.size],Fy.n1,Fy.n2,Fy.n3,Fy.nv)
 #pragma omp target exit data map (delete:Fz.data[0:Fz.size],Fz.n1,Fz.n2,Fz.n3,Fz.nv)
 #pragma omp target exit data map (delete: P.data[0: P.size], P.n1, P.n2, P.n3, P.nv)
+#endif
 
 }
 
@@ -1301,7 +1309,7 @@ void ControlTimestep(const GridArray<double>& G){
   using namespace mpi_config_mod;
   const double huge = 1.0e90;
   double dtminl = huge;
-#pragma omp target teams distribute parallel for reduction(min:dtminl) collapse(3)
+// #pragma omp target teams distribute parallel for reduction(min:dtminl) collapse(3)
   for (int k=ks; k<=ke; k++)
     for (int j=js; j<=je; j++)
       for (int i=is; i<=ie; i++) {
@@ -1332,7 +1340,7 @@ void ControlTimestep(const GridArray<double>& G){
 void EvaluateCh(){
   using namespace mpi_config_mod;
   double chgloc = 0.0e0;
-#pragma omp target teams distribute parallel for collapse(3) reduction(max:chgloc)
+// #pragma omp target teams distribute parallel for collapse(3) reduction(max:chgloc)
   for (int k=ks; k<=ke; k++)
     for (int j=js; j<=je; j++)
       for (int i=is; i<=ie; i++) {
@@ -1362,7 +1370,7 @@ void EvaluateCh(){
 
 void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
   const double alphabp = 0.1e0;
-#pragma omp target teams distribute parallel for collapse(3)
+// #pragma omp target teams distribute parallel for collapse(3)
   for (int k=ks; k<=ke; k++)
     for (int j=js; j<=je; j++)
       for (int i=is; i<=ie; i++) {

@@ -10,6 +10,6 @@
 #include "hydro_arrays.hpp"
 using namespace hydro_arrays_mod;
 
-int main();
+// int main();
 
 #endif

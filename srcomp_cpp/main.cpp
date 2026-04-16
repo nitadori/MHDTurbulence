@@ -13,6 +13,8 @@
 #include <chrono>
 #include <random>
 
+#include <Kokkos_Core.hpp>
+
 #include "config.hpp"
 #include "mpi_config.hpp"
 #include "mhd.hpp"
@@ -193,7 +195,7 @@ static void GenerateProblem(hydflux_mod::GridArray<double>& G,hydflux_mod::Field
 
 
 
-int main() {
+int main(int argc, char **argv) {
   
   using namespace resolution_mod;
   using namespace hydflux_mod;
@@ -203,6 +205,7 @@ int main() {
   const bool usualoutput = false;  // regular output (subject to dtout)
 
   InitializeMPI();
+  Kokkos::initialize(argc, argv);
   
   if(myid_w == 0) printf("setup grids and fields\n");
   
@@ -223,19 +226,29 @@ int main() {
 
   for (step=0;step<stepmax;step++){
     ControlTimestep(G); 
-    if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
+    // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
+    if (myid_w==0 && step%10 ==0) printf("step=%i/%i time=%e dt=%e, %f%%\n",step,stepmax,time_sim,dt, time_sim/time_max*100.0);
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
+    // puts("SetBoundaryCondition");
     SetBoundaryCondition(P,Bs,Br);
+    // puts("EvaluateCh");
     EvaluateCh();
+    // puts("GetNumericalFlux1");
     GetNumericalFlux1(G,P,Fx);
+    // puts("GetNumericalFlux2");
     GetNumericalFlux2(G,P,Fy);
+    // puts("GetNumericalFlux3");
     GetNumericalFlux3(G,P,Fz);
+    // puts("UpdateConservU");
+    UpdateConservU(G,Fx,Fy,Fz,U);
+    // puts("DampPsi");
     UpdateConservU(G,Fx,Fy,Fz,U);
     DampPsi(G,U);
+    // puts("UpdatePrimitvP");
     UpdatePrimitvP(U,P);
 
     time_sim += dt;
-    //printf("dt=%e\n",dt);
+    // printf("dt=%e\n",dt);
     if (! config::benchmarkmode) Output(usualoutput);
     //if (!nooutput) Output1D(usualoutput);
 
@@ -258,6 +271,7 @@ int main() {
   
   if (myid_w == 0) printf("program has been finished\n");
 
+  Kokkos::finalize();
   FinalizeMPI();
 
   return 0;

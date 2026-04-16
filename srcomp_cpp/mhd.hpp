@@ -65,10 +65,12 @@ namespace hydflux_mod {
 
   };
 
-  
+// #define VIEW_LAYOUT_INJK 
+// #define VIEW_LAYOUT_IJKN 
   template <typename T>
   class FieldArray {
   public:
+#if (!defined VIEW_LAYOUT_INJK) && (!defined VIEW_LAYOUT_IJKN)
     T* data = nullptr;
     int nv = 0, n3 = 0, n2 = 0, n1 = 0;
     size_t size = 0;
@@ -95,8 +97,77 @@ namespace hydflux_mod {
       return data[((n*n3 + k)*n2 + j)*n1 + i];
     }
 
-    using Dview = Kokkos::View<double****>;
-    using Hview = Dview::HostMirror;
+#else
+    using DView = Kokkos::View<T****, Kokkos::LayoutLeft>;
+    using HView = typename DView::HostMirror;
+
+    DView d_view;
+    HView h_view;
+    T* data = nullptr;
+    int nv = 0, n3 = 0, n2 = 0, n1 = 0;
+    size_t size = 0;
+
+    FieldArray() = default;
+
+    FieldArray(int _nv, int _n3, int _n2, int _n1) {
+	    allocate(_nv,_n3,_n2,_n1);
+    }
+
+    void allocate(int _nv, int _n3, int _n2, int _n1, const std::string &name="F") {
+	    nv = _nv; n3 = _n3; n2 = _n2; n1 = _n1;
+	    size = static_cast<size_t>(nv) * n3 * n2 * n1;
+#ifdef VIEW_LAYOUT_INJK
+	    d_view = DView(name, n1, nv, n2, n3);
+#endif
+#ifdef VIEW_LAYOUT_IJKN
+	    d_view = DView(name, n1, n2, n3, nv);
+#endif
+	    h_view = Kokkos::create_mirror_view(d_view);
+	    data = h_view.data();
+    }
+    
+    void deallocate() {
+	    h_view = HView();
+	    d_view = DView();
+	    data = nullptr;
+    }
+
+    const T& operator()(int n, int k, int j, int i) const noexcept {
+#ifdef VIEW_LAYOUT_INJK
+	    return h_view(i, n, j, k);
+#endif
+#ifdef VIEW_LAYOUT_IJKN
+	    return h_view(i, j, k, n);
+#endif
+    }
+
+    T& operator()(int n, int k, int j, int i)  noexcept {
+#ifdef VIEW_LAYOUT_INJK
+	    return h_view(i, n, j, k);
+#endif
+#ifdef VIEW_LAYOUT_IJKN
+	    return h_view(i, j, k, n);
+#endif
+    }
+
+    const T& dev(int n, int k, int j, int i) const noexcept {
+#ifdef VIEW_LAYOUT_INJK
+	    return d_view(i, n, j, k);
+#endif
+#ifdef VIEW_LAYOUT_IJKN
+	    return d_view(i, j, k, n);
+#endif
+    }
+
+    T& dev(int n, int k, int j, int i)  noexcept {
+#ifdef VIEW_LAYOUT_INJK
+	    return d_view(i, n, j, k);
+#endif
+#ifdef VIEW_LAYOUT_IJKN
+	    return d_view(i, j, k, n);
+#endif
+    }
+#endif // Kokkos view version?
   };
 
   inline constexpr int ncomp{1}; //! composition
