@@ -224,10 +224,20 @@ int main(int argc, char **argv) {
   int step = 0;
   auto time_beg = std::chrono::high_resolution_clock::now();
 
+  FILE *fpdt = nullptr;
+  if(!myid_w) fpdt = fopen("dt.log", "w");
+
   for (step=0;step<stepmax;step++){
     ControlTimestep(G); 
     // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
     if (myid_w==0 && step%10 ==0) printf("step=%i/%i time=%e dt=%e, %f%%\n",step,stepmax,time_sim,dt, time_sim/time_max*100.0);
+    if(fpdt && step<100){
+	    fprintf(fpdt, "step=%d, time=%e, dt=%e\n", step, time_sim, dt);
+    }
+    if(fpdt && step>=100){
+	    fclose(fpdt);
+	    fpdt = nullptr;
+    }
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
     // puts("SetBoundaryCondition");
     SetBoundaryCondition(P,Bs,Br);

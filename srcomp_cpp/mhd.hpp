@@ -65,12 +65,13 @@ namespace hydflux_mod {
 
   };
 
-// #define VIEW_LAYOUT_INJK 
+#define VIEW_LAYOUT_INJK 
 // #define VIEW_LAYOUT_IJKN 
   template <typename T>
   class FieldArray {
   public:
 #if (!defined VIEW_LAYOUT_INJK) && (!defined VIEW_LAYOUT_IJKN)
+// #warning w/o KOKKOS VIEW
     T* data = nullptr;
     int nv = 0, n3 = 0, n2 = 0, n1 = 0;
     size_t size = 0;
@@ -98,6 +99,7 @@ namespace hydflux_mod {
     }
 
 #else
+// #warning USE KOKKOS VIEW
     using DView = Kokkos::View<T****, Kokkos::LayoutLeft>;
     using HView = typename DView::HostMirror;
 
