@@ -1169,8 +1169,18 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
 		}
-		Prim2Cons(Prigte, Crigte, muvu, muvv, muvw, mfvu,
-				nve1, nbm1, nve2, nbm2, nve3, nbm3);
+		if(1 == idir){
+			Prim2Cons(Prigte, Crigte, muvu, muvv, muvw, mfvu,
+					nve1, nbm1, nve2, nbm2, nve3, nbm3);
+		}
+		if(2 == idir){
+			Prim2Cons(Prigte, Crigte, muvw, muvu, muvv, mfvv,
+					nve2, nbm2, nve3, nbm3, nve1, nbm1);
+		}
+		if(3 == idir){
+			Prim2Cons(Prigte, Crigte, muvv, muvw, muvu, mfvw,
+					nve3, nbm3, nve1, nbm1, nve2, nbm2);
+		}
 
 		HLLD(Clefte, Crigte, numflux);
 	};
