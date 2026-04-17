@@ -1044,16 +1044,6 @@ void GetNumericalFluxD(
 		const FieldArray<double> &P,
 		FieldArray<double>       &F)
 {
-	double Pleftc1[nprim];
-	double Pleftc2[nprim];
-	double Prigtc1[nprim];
-	double Prigtc2[nprim];  
-
-	double numflux [mconsv];
-
-	double Clefte [2*mconsv+madd];
-	double Crigte [2*mconsv+madd];
-
 	auto Prim2Cons = [] (const double (&Prim)[nprim], double (&Cons)[2*mconsv+madd]){
 		Cons[mudn] = Prim[nden]; // rho
 		Cons[muvu] = Prim[nve1]*Prim[nden]; // rho v_x
@@ -1117,7 +1107,15 @@ void GetNumericalFluxD(
 		Cons[mpre] = ptl;
 	};
 
-	auto CalcFlux = [&Pleftc1, &Pleftc2, &Prigtc1, &Prigtc2, &numflux, &Clefte, &Crigte, &Prim2Cons](){
+	auto CalcFlux = [&Prim2Cons](
+			const double  (&Pleftc1)[nprim], 
+			const double  (&Pleftc2)[nprim], 
+			const double  (&Prigtc1)[nprim], 
+			const double  (&Prigtc2)[nprim], 
+			double (&numflux)[mconsv], 
+			double (&Clefte)[2*mconsv+madd], 
+			double (&Crigte)[2*mconsv+madd])
+	{
 		// Calculte Left state
 		double Plefte [nprim];
 		/* | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |  */
@@ -1149,17 +1147,27 @@ void GetNumericalFluxD(
 	};
 
 	if(1 == idir){
-// #pragma omp target teams distribute parallel for collapse(3)
+#pragma omp target teams distribute parallel for collapse(3)
 		for (int k=ks; k<=ke; k++) {
 			for (int j=js; j<=je; j++){
 				for (int i=is; i<=ie+1; i++) {
+					double Pleftc1[nprim];
+					double Pleftc2[nprim];
+					double Prigtc1[nprim];
+					double Prigtc2[nprim];  
+
+					double numflux [mconsv];
+
+					double Clefte [2*mconsv+madd];
+					double Crigte [2*mconsv+madd];
+
 					for (int n=0; n<nprim; n++){
 						Pleftc1[n] = P(n,k,j,i-2);
 						Pleftc2[n] = P(n,k,j,i-1);
 						Prigtc1[n] = P(n,k,j,i  );
 						Prigtc2[n] = P(n,k,j,i+1);
 					}
-					CalcFlux();
+					CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte);
 
 					F(mden,k,j,i) = numflux[mden];
 					F(mrv1,k,j,i) = numflux[mrvu];
@@ -1187,13 +1195,23 @@ void GetNumericalFluxD(
 		for(int k=ks; k<=ke; k++){
 			for(int i=is; i<=ie; i++){
 				for(int j=js; j<=je+1; j++){
+					double Pleftc1[nprim];
+					double Pleftc2[nprim];
+					double Prigtc1[nprim];
+					double Prigtc2[nprim];  
+
+					double numflux [mconsv];
+
+					double Clefte [2*mconsv+madd];
+					double Crigte [2*mconsv+madd];
+
 					for (int n=0; n<nprim; n++){
 						Pleftc1[n] = P(n,k,j-2,i);
 						Pleftc2[n] = P(n,k,j-1,i);
 						Prigtc1[n] = P(n,k,j  ,i);
 						Prigtc2[n] = P(n,k,j+1,i);
 					}
-					CalcFlux();
+					CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte);
 
 					F(mden,k,j,i) = numflux[mden];
 					F(mrv1,k,j,i) = numflux[mrvw];
@@ -1220,13 +1238,23 @@ void GetNumericalFluxD(
 		for(int j=js; j<=je; ++j){
 			for(int i=is; i<=ie; ++i){
 				for(int k=ks; k<=ke+1; ++k){
+					double Pleftc1[nprim];
+					double Pleftc2[nprim];
+					double Prigtc1[nprim];
+					double Prigtc2[nprim];  
+
+					double numflux [mconsv];
+
+					double Clefte [2*mconsv+madd];
+					double Crigte [2*mconsv+madd];
+
 					for (int n=0; n<nprim; n++){
 						Pleftc1[n] = P(n,k-2,j,i);
 						Pleftc2[n] = P(n,k-1,j,i);
 						Prigtc1[n] = P(n,k  ,j,i);
 						Prigtc2[n] = P(n,k+1,j,i);
 					}
-					CalcFlux();
+					CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte);
 
 					F(mden,k,j,i) = numflux[mden];
 					F(mrv1,k,j,i) = numflux[mrvv];
