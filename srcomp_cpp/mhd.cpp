@@ -1044,11 +1044,25 @@ void GetNumericalFluxD(
 		const FieldArray<double> &P,
 		FieldArray<double>       &F)
 {
-	auto Prim2Cons = [] (const double (&Prim)[nprim], double (&Cons)[2*mconsv+madd]){
+	auto Prim2Cons = [] (
+			const double (&Prim)[nprim], 
+			double (&Cons)[2*mconsv+madd],
+			const int muv1,
+			const int muv2,
+			const int muv3,
+			const int mfvp, // diag pressure
+			const int nved,
+			const int nbmd,
+			const int nvef, // f = d+1 (mod 3)
+			const int nbmf,
+			const int nveb, // b = d-1 (mod 3)
+			const int nbmb)
+	{
+		//direction dependent u,v,w
 		Cons[mudn] = Prim[nden]; // rho
-		Cons[muvu] = Prim[nve1]*Prim[nden]; // rho v_x
-		Cons[muvv] = Prim[nve2]*Prim[nden]; // rho v_y
-		Cons[muvw] = Prim[nve3]*Prim[nden]; // rho v_z
+		Cons[muv1] = Prim[nve1]*Prim[nden]; // rho v_x
+		Cons[muv2] = Prim[nve2]*Prim[nden]; // rho v_y
+		Cons[muv3] = Prim[nve3]*Prim[nden]; // rho v_z
 		Cons[muet] = Prim[nene]*Prim[nden]  // e_i
 			+0.5e0*Prim[nden]*(                  
 					+Prim[nve1]*Prim[nve1]                 
@@ -1071,23 +1085,26 @@ void GetNumericalFluxD(
 				+Prim[nbm2]*Prim[nbm2]
 				+Prim[nbm3]*Prim[nbm3])/2.0e0;
 
+		//direction dependent, nve1 or nbm1
 		Cons[mfdn] = Prim[nden]*Prim[nve1];
-		Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nve1] 
-			+ ptl-Prim[nbm1]*Prim[nbm1];
-		Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nve1]
-			-Prim[nbm2]*Prim[nbm1];
-		Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nve1]
-			-Prim[nbm3]*Prim[nbm1];
+		Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nved] 
+		                       -Prim[nbm1]*Prim[nbmd];
+		Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nved]
+		                       -Prim[nbm2]*Prim[nbmd];
+		Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nved]
+		                       -Prim[nbm3]*Prim[nbmd];
+		Cons[mfvp] += ptl;
 		Cons[mfet] = (Cons[muet]+ptl)*Prim[nve1]
 			-( Prim[nbm1]*Prim[nve1]
 					+Prim[nbm2]*Prim[nve2]
 					+Prim[nbm3]*Prim[nve3])*Prim[nbm1];
 
+		// direction dependent 2, 1, 3, 1
 		Cons[mfbu] =  0.0e0;
-		Cons[mfbv] =  Prim[nbm2]*Prim[nve1]
-			-Prim[nve2]*Prim[nbm1];
-		Cons[mfbw] =  Prim[nbm3]*Prim[nve1]
-			-Prim[nve3]*Prim[nbm1];
+		Cons[mfbv] =  Prim[nbmf]*Prim[nved]
+		             -Prim[nvef]*Prim[nbmd];
+		Cons[mfbw] =  Prim[nbmb]*Prim[nved]
+		             -Prim[nveb]*Prim[nbmd];
 		Cons[mfbp] = 0.0e0;  // psi
 
 		for(int n=0; n<ncomp;n++){
@@ -1107,7 +1124,7 @@ void GetNumericalFluxD(
 		Cons[mpre] = ptl;
 	};
 
-	auto CalcFlux = [&Prim2Cons](
+	auto CalcFlux = [&Prim2Cons, idir](
 			const double  (&Pleftc1)[nprim], 
 			const double  (&Pleftc2)[nprim], 
 			const double  (&Prigtc1)[nprim], 
@@ -1127,7 +1144,18 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
 		}
-		Prim2Cons(Plefte, Clefte);
+		if(1 == idir){
+			Prim2Cons(Plefte, Clefte, muvu, muvv, muvw, mfvu,
+					nve1, nbm1, nve2, nbm2, nve3, nbm3);
+		}
+		if(2 == idir){
+			Prim2Cons(Plefte, Clefte, muvw, muvu, muvv, mfvv,
+					nve2, nbm2, nve3, nbm3, nve1, nbm1);
+		}
+		if(3 == idir){
+			Prim2Cons(Plefte, Clefte, muvv, muvw, muvu, mfvw,
+					nve3, nbm3, nve1, nbm1, nve2, nbm2);
+		}
 
 		// Calculte Right state
 
@@ -1141,7 +1169,8 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
 		}
-		Prim2Cons(Prigte, Crigte);
+		Prim2Cons(Prigte, Crigte, muvu, muvv, muvw, mfvu,
+				nve1, nbm1, nve2, nbm2, nve3, nbm3);
 
 		HLLD(Clefte, Crigte, numflux);
 	};

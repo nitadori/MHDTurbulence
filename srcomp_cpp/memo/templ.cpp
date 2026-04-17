@@ -28,7 +28,7 @@
 	//direction dependent, nve1 or nbm1
 	Cons[mfdn] = Prim[nden]*Prim[nve1];
 	Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nve1] 
-	                  + ptl-Prim[nbm1]*Prim[nbm1];
+	                  + ptl-Prim[nbm1]*Prim[nbm1];// p diagnonal
 	Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nve1]
 	                       -Prim[nbm2]*Prim[nbm1];
         Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nve1]
