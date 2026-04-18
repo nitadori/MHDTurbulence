@@ -247,8 +247,19 @@ int main(int argc, char **argv) {
 #else
     GetNumericalFluxD(1, G,P,Fx);
 #endif
+
+#if 1
     GetNumericalFlux2(G,P,Fy);
+#else
+    GetNumericalFluxD(2, G,P,Fx);
+#endif
+
+#if 1
     GetNumericalFlux3(G,P,Fz);
+#else
+    GetNumericalFluxD(3, G,P,Fx);
+#endif
+
     UpdateConservU(G,Fx,Fy,Fz,U);
     DampPsi(G,U);
     UpdatePrimitvP(U,P);
