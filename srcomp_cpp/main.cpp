@@ -239,19 +239,21 @@ int main(int argc, char **argv) {
 	    fpdt = nullptr;
     }
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
-    // puts("SetBoundaryCondition");
+
     SetBoundaryCondition(P,Bs,Br);
     EvaluateCh();
-#if 0
+
+#if 1
     GetNumericalFlux1(G,P,Fx);
 #else
     GetNumericalFluxD(1, G,P,Fx);
 #endif
 
-#if 1
+#if 0
     GetNumericalFlux2(G,P,Fy);
 #else
-    GetNumericalFluxD(2, G,P,Fx);
+    // GetNumericalFluxD(2, G,P,Fx);
+    GetNumericalFlux2a(G,P,Fy);
 #endif
 
 #if 1
