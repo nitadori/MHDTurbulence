@@ -1038,32 +1038,25 @@ void GetNumericalFlux3(const GridArray<double>&G,const FieldArray<double>& P,Fie
 
 }
 
-#if 0
 void GetNumericalFluxD(
 		const int idir, 
-		const GridArray<double>  &G,
-		const FieldArray<double> &P,
-		FieldArray<double>       &F)
+		const GridArray<double>&G,
+		const FieldArray<double>& P,
+		FieldArray<double>& F)
 {
-	auto Prim2Cons = [] (
+	auto Norm2 = [](const auto &x, const auto &y, const auto &z){
+		return x*x + y*y + z*z;
+	};
+
+	auto Prim2Cons1 = [] (
 			const double (&Prim)[nprim], 
-			double (&Cons)[2*mconsv+madd],
-			const int muv1,
-			const int muv2,
-			const int muv3,
-			const int mfvp, // diag pressure
-			const int nved,
-			const int nbmd,
-			const int nvef, // f = d+1 (mod 3)
-			const int nbmf,
-			const int nveb, // b = d-1 (mod 3)
-			const int nbmb)
+			double (&Cons)[2*mconsv+madd])
 	{
-		//direction dependent u,v,w
+		// direction dependent u,v,w
 		Cons[mudn] = Prim[nden]; // rho
-		Cons[muv1] = Prim[nve1]*Prim[nden]; // rho v_x
-		Cons[muv2] = Prim[nve2]*Prim[nden]; // rho v_y
-		Cons[muv3] = Prim[nve3]*Prim[nden]; // rho v_z
+		Cons[muvu] = Prim[nve1]*Prim[nden]; // rho v_x
+		Cons[muvv] = Prim[nve2]*Prim[nden]; // rho v_y
+		Cons[muvw] = Prim[nve3]*Prim[nden]; // rho v_z
 		Cons[muet] = Prim[nene]*Prim[nden]  // e_i
 			+0.5e0*Prim[nden]*(                  
 					+Prim[nve1]*Prim[nve1]                 
@@ -1074,6 +1067,7 @@ void GetNumericalFluxD(
 					+Prim[nbm2]*Prim[nbm2]                 
 					+Prim[nbm3]*Prim[nbm3]); // + B^2/2
 
+		// direction dependent u,v,w
 		Cons[mubu] = Prim[nbm1]; // b_x
 		Cons[mubv] = Prim[nbm2]; // b_y
 		Cons[mubw] = Prim[nbm3]; // b_z
@@ -1087,25 +1081,25 @@ void GetNumericalFluxD(
 				+Prim[nbm3]*Prim[nbm3])/2.0e0;
 
 		//direction dependent, nve1 or nbm1
+		// direction dependent u,v,w
 		Cons[mfdn] = Prim[nden]*Prim[nve1];
-		Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nved] 
-		                       -Prim[nbm1]*Prim[nbmd];
-		Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nved]
-		                       -Prim[nbm2]*Prim[nbmd];
-		Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nved]
-		                       -Prim[nbm3]*Prim[nbmd];
-		Cons[mfvp] += ptl;
+		Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nve1] 
+		                  + ptl-Prim[nbm1]*Prim[nbm1];// p diagnonal
+		Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nve1]
+		                       -Prim[nbm2]*Prim[nbm1];
+		Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nve1]
+		                       -Prim[nbm3]*Prim[nbm1];
 		Cons[mfet] = (Cons[muet]+ptl)*Prim[nve1]
-			-( Prim[nbm1]*Prim[nve1]
-					+Prim[nbm2]*Prim[nve2]
-					+Prim[nbm3]*Prim[nve3])*Prim[nbm1];
+		                -( Prim[nbm1]*Prim[nve1]
+		      +Prim[nbm2]*Prim[nve2]
+		      +Prim[nbm3]*Prim[nve3])*Prim[nbm1];
 
 		// direction dependent 2, 1, 3, 1
 		Cons[mfbu] =  0.0e0;
-		Cons[mfbv] =  Prim[nbmf]*Prim[nved]
-		             -Prim[nvef]*Prim[nbmd];
-		Cons[mfbw] =  Prim[nbmb]*Prim[nved]
-		             -Prim[nveb]*Prim[nbmd];
+		Cons[mfbv] =  Prim[nbm2]*Prim[nve1]
+		             -Prim[nve2]*Prim[nbm1];
+		Cons[mfbw] =  Prim[nbm3]*Prim[nve1]
+		             -Prim[nve3]*Prim[nbm1];
 		Cons[mfbp] = 0.0e0;  // psi
 
 		for(int n=0; n<ncomp;n++){
@@ -1118,566 +1112,151 @@ void GetNumericalFluxD(
 				+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
 
 		Cons[mcsp] = sqrt((cts +sqrt(cts*cts
-						-4.0e0*css*Prim[nbm1]*Prim[nbm1] 
+						-4.0e0*css*Prim[nbm1]*Prim[nbm1]  //direction dependent
 						/Prim[nden])   
 				  )/2.0e0);
 		Cons[mvel] = Prim[nve1]; //direction dependent
 		Cons[mpre] = ptl;
 	};
-	auto Prim2Cons2 = [] (
-			const double (&Prim)[nprim], 
-			double (&Cons)[2*mconsv+madd])
-	{
-	  //direction dependent w,u,v
-	Cons[mudn] = Prim[nden]; // rho
-	Cons[muvw] = Prim[nve1]*Prim[nden]; // rho v_x
-	Cons[muvu] = Prim[nve2]*Prim[nden]; // rho v_y
-	Cons[muvv] = Prim[nve3]*Prim[nden]; // rho v_z
-        Cons[muet] = Prim[nene]*Prim[nden]  // e_i
-	              +0.5e0*Prim[nden]*(                  
-                          +Prim[nve1]*Prim[nve1]                 
-                          +Prim[nve2]*Prim[nve2]                 
-                          +Prim[nve3]*Prim[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prim[nbm1]*Prim[nbm1]                 
-                          +Prim[nbm2]*Prim[nbm2]                 
-                          +Prim[nbm3]*Prim[nbm3]); // + B^2/2
-
-	Cons[mubw] = Prim[nbm1]; // b_x
-	Cons[mubu] = Prim[nbm2]; // b_y
-	Cons[mubv] = Prim[nbm3]; // b_z
-	Cons[mubp] = Prim[nbps]; // psi
-	for(int n=0; n<ncomp; n++){
-	  Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
-	}
-	
-        double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
-                                      +Prim[nbm2]*Prim[nbm2]
-				      +Prim[nbm3]*Prim[nbm3])/2.0e0;
-	//direction dependent, nve2 or nbm2
-	Cons[mfdn] = Prim[nden]*Prim[nve2];
-	Cons[mfvw] = Prim[nden]*Prim[nve1]*Prim[nve2] 
-	                           -Prim[nbm1]*Prim[nbm2];
-	Cons[mfvu] = Prim[nden]*Prim[nve2]*Prim[nve2]
-      	                     + ptl -Prim[nbm2]*Prim[nbm2];// p diagnonal
-        Cons[mfvv] = Prim[nden]*Prim[nve3]*Prim[nve2]
-	                          - Prim[nbm3]*Prim[nbm2];
-        Cons[mfet] = (Cons[muet]+ptl)*Prim[nve2]
-                           -( Prim[nbm1]*Prim[nve1]
-                             +Prim[nbm2]*Prim[nve2]
-			     +Prim[nbm3]*Prim[nve3])*Prim[nbm2];
-
-	// direction dependent 3, 2, 1, 2
-	Cons[mfbu] =  0.0;
-	Cons[mfbv] =  Prim[nbm3]*Prim[nve2]
-	              - Prim[nve3]*Prim[nbm2];
-	Cons[mfbw] =  Prim[nbm1]*Prim[nve2]
-	              - Prim[nve1]*Prim[nbm2];
-	Cons[mfbp] = 0.0e0;  // psi
-	
-	for(int n=0; n<ncomp; n++){
-	  Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve2]; // composition
-	}
-	double css = Prim[ncsp]*Prim[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Prim[nbm1]*Prim[nbm1]  
-                +Prim[nbm2]*Prim[nbm2]  
-		+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
-
-         Cons[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prim[nbm2]*Prim[nbm2]  //direction dependent
-                                            /Prim[nden])   
-			      )/2.0e0);
-         Cons[mvel] = Prim[nve2];//direction dependent
-         Cons[mpre] = ptl;
-	};
-	auto Prim2Cons3 = [] (
-			const double (&Prim)[nprim], 
-			double (&Cons)[2*mconsv+madd])
-	{
-	  //direction dependent v,w,u
-	Cons[mudn] = Prim[nden]; // rho
-	Cons[muvv] = Prim[nve1]*Prim[nden]; // rho v_x
-	Cons[muvw] = Prim[nve2]*Prim[nden]; // rho v_y
-	Cons[muvu] = Prim[nve3]*Prim[nden]; // rho v_z
-        Cons[muet] = Prim[nene]*Prim[nden]  // e_i
-	              +0.5e0*Prim[nden]*(                  
-                          +Prim[nve1]*Prim[nve1]                 
-                          +Prim[nve2]*Prim[nve2]                 
-                          +Prim[nve3]*Prim[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prim[nbm1]*Prim[nbm1]                 
-                          +Prim[nbm2]*Prim[nbm2]                 
-                          +Prim[nbm3]*Prim[nbm3]); // + B^2/2
-
-	Cons[mubv] = Prim[nbm1]; // b_x
-	Cons[mubw] = Prim[nbm2]; // b_y
-	Cons[mubu] = Prim[nbm3]; // b_z
-	Cons[mubp] = Prim[nbps]; // psi
-	for(int n=0; n<ncomp;n++){
-	  Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
-	}
-	// total pressure
-        double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
-				+Prim[nbm2]*Prim[nbm2]
-				+Prim[nbm3]*Prim[nbm3])/2.0e0;
-	//direction dependent, nve3 or nbm3
-	Cons[mfdn] = Prim[nden]*Prim[nve3];
-	Cons[mfvv] = Prim[nden]*Prim[nve1]*Prim[nve3] 
-	                       -Prim[nbm1]*Prim[nbm3];
-	Cons[mfvw] = Prim[nden]*Prim[nve2]*Prim[nve3]
-      	                       -Prim[nbm2]*Prim[nbm3];
-        Cons[mfvu] = Prim[nden]*Prim[nve3]*Prim[nve3]
-	                 + ptl -Prim[nbm3]*Prim[nbm3]; // p diagnonal
-        Cons[mfet] = (Cons[muet]+ptl)*Prim[nve3]
-                           -( Prim[nbm1]*Prim[nve1]
-                             +Prim[nbm2]*Prim[nve2]
-			     +Prim[nbm3]*Prim[nve3])*Prim[nbm3];
-
-	// direction dependent 1, 3, 2, 3
-	Cons[mfbu] = 0.0e0;
-	Cons[mfbv] =  Prim[nbm1]*Prim[nve3]
-	              - Prim[nve1]*Prim[nbm3];
-	Cons[mfbw] =  Prim[nbm2]*Prim[nve3]
-	              - Prim[nve2]*Prim[nbm3];
-	Cons[mfbp] = 0.0e0;  // psi
-	
-	for(int n=0; n<ncomp;n++){
-	  Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve3]; // composition
-	}
-	double css = Prim[ncsp]*Prim[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Prim[nbm1]*Prim[nbm1]  
-                +Prim[nbm2]*Prim[nbm2]  
-		+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
-
-         Cons[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prim[nbm3]*Prim[nbm3]  //direction dependent
-                                            /Prim[nden])   
-			      )/2.0e0);
-         Cons[mvel] = Prim[nve3]; //direction dependent
-         Cons[mpre] = ptl;
-	};
-
-	auto CalcFlux = [&Prim2Cons, idir, &Prim2Cons2, &Prim2Cons3](
-			const double  (&Pleftc1)[nprim], 
-			const double  (&Pleftc2)[nprim], 
-			const double  (&Prigtc1)[nprim], 
-			const double  (&Prigtc2)[nprim], 
-			double (&numflux)[mconsv], 
-			double (&Clefte)[2*mconsv+madd], 
-			double (&Crigte)[2*mconsv+madd])
-	{
-		// Calculte Left state
-		double Plefte [nprim];
-		/* | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |  */
-		/*                     You are here                   */
-		for (int n=0; n<nprim; n++){
-			double dsvp =  Prigtc1[n]- Pleftc2[n];
-			double dsvm =              Pleftc2[n]- Pleftc1[n];
-			double dsv;
-			vanLeer(dsvp,dsvm,dsv);
-			Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
-		}
-		if(1 == idir){
-			Prim2Cons(Plefte, Clefte, muvu, muvv, muvw, mfvu,
-					nve1, nbm1, nve2, nbm2, nve3, nbm3);
-		}
-		if(2 == idir){
-#if 0
-			Prim2Cons(Plefte, Clefte, muvw, muvu, muvv, mfvv,
-					nve2, nbm2, nve3, nbm3, nve1, nbm1);
-#else
-			Prim2Cons2(Plefte, Clefte);
-#endif
-		}
-		if(3 == idir){
-#if 0
-			Prim2Cons(Plefte, Clefte, muvv, muvw, muvu, mfvw,
-					nve3, nbm3, nve1, nbm1, nve2, nbm2);
-#else
-			Prim2Cons3(Plefte, Clefte);
-#endif
-		}
-
-		// Calculte Right state
-
-		double Prigte [nprim];
-		/* | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |  */
-		/*                     You are here                   */
-		for (int n=0; n<nprim; n++){
-			double dsvp =  Prigtc2[n]- Prigtc1[n];
-			double dsvm =              Prigtc1[n]- Pleftc2[n];
-			double dsv;
-			vanLeer(dsvp,dsvm,dsv);
-			Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
-		}
-		if(1 == idir){
-			Prim2Cons(Prigte, Crigte, muvu, muvv, muvw, mfvu,
-					nve1, nbm1, nve2, nbm2, nve3, nbm3);
-		}
-		if(2 == idir){
-#if 0
-			Prim2Cons(Prigte, Crigte, muvw, muvu, muvv, mfvv,
-					nve2, nbm2, nve3, nbm3, nve1, nbm1);
-#else
-			Prim2Cons2(Prigte, Crigte);
-#endif
-		}
-		if(3 == idir){
-#if 0
-			Prim2Cons(Prigte, Crigte, muvv, muvw, muvu, mfvw,
-					nve3, nbm3, nve1, nbm1, nve2, nbm2);
-#else
-			Prim2Cons3(Prigte, Crigte);
-#endif
-		}
-
-		HLLD(Clefte, Crigte, numflux);
-	};
-
-	if(1 == idir){
-#pragma omp target teams distribute parallel for collapse(3)
-		for (int k=ks; k<=ke; k++) {
-			for (int j=js; j<=je; j++){
-				for (int i=is; i<=ie+1; i++) {
-					double Pleftc1[nprim];
-					double Pleftc2[nprim];
-					double Prigtc1[nprim];
-					double Prigtc2[nprim];  
-
-					double numflux [mconsv];
-
-					double Clefte [2*mconsv+madd];
-					double Crigte [2*mconsv+madd];
-
-					for (int n=0; n<nprim; n++){
-						Pleftc1[n] = P(n,k,j,i-2);
-						Pleftc2[n] = P(n,k,j,i-1);
-						Prigtc1[n] = P(n,k,j,i  );
-						Prigtc2[n] = P(n,k,j,i+1);
-					}
-					CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte);
-
-					F(mden,k,j,i) = numflux[mden];
-					F(mrv1,k,j,i) = numflux[mrvu];
-					F(mrv2,k,j,i) = numflux[mrvv];
-					F(mrv3,k,j,i) = numflux[mrvw];
-					F(meto,k,j,i) = numflux[meto];
-					//F(mbm1,k,j,i) = numflux[mbmu];
-					F(mbm2,k,j,i) = numflux[mbmv];
-					F(mbm3,k,j,i) = numflux[mbmw];
-
-					F(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
-					               -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-					F(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
-					               -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
-					for(int n=0; n<ncomp;n++){
-						F(mst+n,k,j,i) = numflux[mst+n]; // composition
-					}
-				}
-			}
-		}
-	}
-
-	if(2 == idir){
-#pragma omp target teams distribute parallel for collapse(3)
-		for(int k=ks; k<=ke; k++){
-			for(int i=is; i<=ie; i++){
-				for(int j=js; j<=je+1; j++){
-					double Pleftc1[nprim];
-					double Pleftc2[nprim];
-					double Prigtc1[nprim];
-					double Prigtc2[nprim];  
-
-					double numflux [mconsv];
-
-					double Clefte [2*mconsv+madd];
-					double Crigte [2*mconsv+madd];
-
-					for (int n=0; n<nprim; n++){
-						Pleftc1[n] = P(n,k,j-2,i);
-						Pleftc2[n] = P(n,k,j-1,i);
-						Prigtc1[n] = P(n,k,j  ,i);
-						Prigtc2[n] = P(n,k,j+1,i);
-					}
-					CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte);
-
-					F(mden,k,j,i) = numflux[mden];
-					F(mrv1,k,j,i) = numflux[mrvw];
-					F(mrv2,k,j,i) = numflux[mrvu];
-					F(mrv3,k,j,i) = numflux[mrvv];
-					F(meto,k,j,i) = numflux[meto];
-					F(mbm1,k,j,i) = numflux[mbmw];
-					//F(mbm2,k,j,i) = numflux[mbmu];
-					F(mbm3,k,j,i) = numflux[mbmv];
-
-					F(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
-					               -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-					F(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
-					               -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
-					for(int n=0; n<ncomp;n++){
-						F(mst+n,k,j,i) = numflux[mst+n]; // composition
-					}
-				}
-			}
-		}
-	}
-
-	if(3 == idir){
-		for(int j=js; j<=je; ++j){
-			for(int i=is; i<=ie; ++i){
-				for(int k=ks; k<=ke+1; ++k){
-					double Pleftc1[nprim];
-					double Pleftc2[nprim];
-					double Prigtc1[nprim];
-					double Prigtc2[nprim];  
-
-					double numflux [mconsv];
-
-					double Clefte [2*mconsv+madd];
-					double Crigte [2*mconsv+madd];
-
-					for (int n=0; n<nprim; n++){
-						Pleftc1[n] = P(n,k-2,j,i);
-						Pleftc2[n] = P(n,k-1,j,i);
-						Prigtc1[n] = P(n,k  ,j,i);
-						Prigtc2[n] = P(n,k+1,j,i);
-					}
-					CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte);
-
-					F(mden,k,j,i) = numflux[mden];
-					F(mrv1,k,j,i) = numflux[mrvv];
-					F(mrv2,k,j,i) = numflux[mrvw];
-					F(mrv3,k,j,i) = numflux[mrvu];
-					F(meto,k,j,i) = numflux[meto];
-					F(mbm1,k,j,i) = numflux[mbmv];
-					F(mbm2,k,j,i) = numflux[mbmw];
-					//F(mbm3,k,j,i) = numflux[mbm];
-
-					F(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
-					                -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-					F(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
-					               -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
-					for(int n=0; n<ncomp;n++){
-						F(mst+n,k,j,i) = numflux[mst+n]; // composition
-					}
-				}
-			}
-		}
-	}
-}
-#endif
-
-void GetNumericalFluxD(
-		const int idir, 
-		const GridArray<double>&G,
-		const FieldArray<double>& P,
-		FieldArray<double>& F)
-{
-	auto Prim2Cons1 = [] (
-			const double (&Prim)[nprim], 
-			double (&Cons)[2*mconsv+madd])
-	{
-	  //direction dependent u,v,w
-	Cons[mudn] = Prim[nden]; // rho
-	Cons[muvu] = Prim[nve1]*Prim[nden]; // rho v_x
-	Cons[muvv] = Prim[nve2]*Prim[nden]; // rho v_y
-	Cons[muvw] = Prim[nve3]*Prim[nden]; // rho v_z
-        Cons[muet] = Prim[nene]*Prim[nden]  // e_i
-	              +0.5e0*Prim[nden]*(                  
-                          +Prim[nve1]*Prim[nve1]                 
-                          +Prim[nve2]*Prim[nve2]                 
-                          +Prim[nve3]*Prim[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prim[nbm1]*Prim[nbm1]                 
-                          +Prim[nbm2]*Prim[nbm2]                 
-                          +Prim[nbm3]*Prim[nbm3]); // + B^2/2
-
-	Cons[mubu] = Prim[nbm1]; // b_x
-	Cons[mubv] = Prim[nbm2]; // b_y
-	Cons[mubw] = Prim[nbm3]; // b_z
-	Cons[mubp] = Prim[nbps]; // psi
-	for(int n=0; n<ncomp;n++){
-	  Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
-	}
-	// total pressure
-        double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
-				+Prim[nbm2]*Prim[nbm2]
-				+Prim[nbm3]*Prim[nbm3])/2.0e0;
-
-	//direction dependent, nve1 or nbm1
-	Cons[mfdn] = Prim[nden]*Prim[nve1];
-	Cons[mfvu] = Prim[nden]*Prim[nve1]*Prim[nve1] 
-	                  + ptl-Prim[nbm1]*Prim[nbm1];// p diagnonal
-	Cons[mfvv] = Prim[nden]*Prim[nve2]*Prim[nve1]
-	                       -Prim[nbm2]*Prim[nbm1];
-        Cons[mfvw] = Prim[nden]*Prim[nve3]*Prim[nve1]
-	                       -Prim[nbm3]*Prim[nbm1];
-        Cons[mfet] = (Cons[muet]+ptl)*Prim[nve1]
-                           -( Prim[nbm1]*Prim[nve1]
-                             +Prim[nbm2]*Prim[nve2]
-			     +Prim[nbm3]*Prim[nve3])*Prim[nbm1];
-
-	// direction dependent 2, 1, 3, 1
-	Cons[mfbu] =  0.0e0;
-	Cons[mfbv] =  Prim[nbm2]*Prim[nve1]
-	             -Prim[nve2]*Prim[nbm1];
-	Cons[mfbw] =  Prim[nbm3]*Prim[nve1]
-	             -Prim[nve3]*Prim[nbm1];
-	Cons[mfbp] = 0.0e0;  // psi
-     
-	for(int n=0; n<ncomp;n++){
-	  Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve1]; // composition
-	}
-	double css = Prim[ncsp]*Prim[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Prim[nbm1]*Prim[nbm1]  
-                +Prim[nbm2]*Prim[nbm2]  
-		+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
-
-         Cons[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prim[nbm1]*Prim[nbm1]  //direction dependent
-                                            /Prim[nden])   
-			      )/2.0e0);
-         Cons[mvel] = Prim[nve1]; //direction dependent
-         Cons[mpre] = ptl;
-	};
 
 	auto Prim2Cons2 = [] (
 			const double (&Prim)[nprim], 
 			double (&Cons)[2*mconsv+madd])
 	{
-	  //direction dependent w,u,v
-	Cons[mudn] = Prim[nden]; // rho
-	Cons[muvw] = Prim[nve1]*Prim[nden]; // rho v_x
-	Cons[muvu] = Prim[nve2]*Prim[nden]; // rho v_y
-	Cons[muvv] = Prim[nve3]*Prim[nden]; // rho v_z
-        Cons[muet] = Prim[nene]*Prim[nden]  // e_i
-	              +0.5e0*Prim[nden]*(                  
-                          +Prim[nve1]*Prim[nve1]                 
-                          +Prim[nve2]*Prim[nve2]                 
-                          +Prim[nve3]*Prim[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prim[nbm1]*Prim[nbm1]                 
-                          +Prim[nbm2]*Prim[nbm2]                 
-                          +Prim[nbm3]*Prim[nbm3]); // + B^2/2
+		//direction dependent w,u,v
+		Cons[mudn] = Prim[nden]; // rho
+		Cons[muvw] = Prim[nve1]*Prim[nden]; // rho v_x
+		Cons[muvu] = Prim[nve2]*Prim[nden]; // rho v_y
+		Cons[muvv] = Prim[nve3]*Prim[nden]; // rho v_z
+		Cons[muet] = Prim[nene]*Prim[nden]  // e_i
+			+0.5e0*Prim[nden]*(                  
+					+Prim[nve1]*Prim[nve1]                 
+					+Prim[nve2]*Prim[nve2]                 
+					+Prim[nve3]*Prim[nve3])  // + rho v^2/2
+			+0.5e0*             (                 
+					+Prim[nbm1]*Prim[nbm1]                 
+					+Prim[nbm2]*Prim[nbm2]                 
+					+Prim[nbm3]*Prim[nbm3]); // + B^2/2
 
-	Cons[mubw] = Prim[nbm1]; // b_x
-	Cons[mubu] = Prim[nbm2]; // b_y
-	Cons[mubv] = Prim[nbm3]; // b_z
-	Cons[mubp] = Prim[nbps]; // psi
-	for(int n=0; n<ncomp; n++){
-	  Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
-	}
-	
-        double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
-                                      +Prim[nbm2]*Prim[nbm2]
-				      +Prim[nbm3]*Prim[nbm3])/2.0e0;
-	//direction dependent, nve2 or nbm2
-	Cons[mfdn] = Prim[nden]*Prim[nve2];
-	Cons[mfvw] = Prim[nden]*Prim[nve1]*Prim[nve2] 
-	                           -Prim[nbm1]*Prim[nbm2];
-	Cons[mfvu] = Prim[nden]*Prim[nve2]*Prim[nve2]
-      	                     + ptl -Prim[nbm2]*Prim[nbm2];// p diagnonal
-        Cons[mfvv] = Prim[nden]*Prim[nve3]*Prim[nve2]
-	                          - Prim[nbm3]*Prim[nbm2];
-        Cons[mfet] = (Cons[muet]+ptl)*Prim[nve2]
-                           -( Prim[nbm1]*Prim[nve1]
-                             +Prim[nbm2]*Prim[nve2]
-			     +Prim[nbm3]*Prim[nve3])*Prim[nbm2];
+		//direction dependent w,u,v
+		Cons[mubw] = Prim[nbm1]; // b_x
+		Cons[mubu] = Prim[nbm2]; // b_y
+		Cons[mubv] = Prim[nbm3]; // b_z
+		Cons[mubp] = Prim[nbps]; // psi
+		for(int n=0; n<ncomp; n++){
+			Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
+		}
 
-	// direction dependent 3, 2, 1, 2
-	Cons[mfbu] =  0.0;
-	Cons[mfbv] =  Prim[nbm3]*Prim[nve2]
-	              - Prim[nve3]*Prim[nbm2];
-	Cons[mfbw] =  Prim[nbm1]*Prim[nve2]
-	              - Prim[nve1]*Prim[nbm2];
-	Cons[mfbp] = 0.0e0;  // psi
-	
-	for(int n=0; n<ncomp; n++){
-	  Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve2]; // composition
-	}
-	double css = Prim[ncsp]*Prim[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Prim[nbm1]*Prim[nbm1]  
-                +Prim[nbm2]*Prim[nbm2]  
-		+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
+		double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
+				+Prim[nbm2]*Prim[nbm2]
+				+Prim[nbm3]*Prim[nbm3])/2.0e0;
+		//direction dependent, nve2 or nbm2
+		//direction dependent w,u,v
+		Cons[mfdn] = Prim[nden]*Prim[nve2];
+		Cons[mfvw] = Prim[nden]*Prim[nve1]*Prim[nve2] 
+		                       -Prim[nbm1]*Prim[nbm2];
+		Cons[mfvu] = Prim[nden]*Prim[nve2]*Prim[nve2]
+		                 + ptl -Prim[nbm2]*Prim[nbm2];// p diagnonal
+		Cons[mfvv] = Prim[nden]*Prim[nve3]*Prim[nve2]
+		                      - Prim[nbm3]*Prim[nbm2];
+		Cons[mfet] =      (Cons[muet]+ptl)*Prim[nve2]
+			-( Prim[nbm1]*Prim[nve1]
+			   +Prim[nbm2]*Prim[nve2]
+			   +Prim[nbm3]*Prim[nve3])*Prim[nbm2];
 
-         Cons[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prim[nbm2]*Prim[nbm2]  //direction dependent
-                                            /Prim[nden])   
-			      )/2.0e0);
-         Cons[mvel] = Prim[nve2];//direction dependent
-         Cons[mpre] = ptl;
+		// direction dependent 3, 2, 1, 2
+		Cons[mfbu] =  0.0;
+		Cons[mfbv] =  Prim[nbm3]*Prim[nve2]
+		            - Prim[nve3]*Prim[nbm2];
+		Cons[mfbw] =  Prim[nbm1]*Prim[nve2]
+		            - Prim[nve1]*Prim[nbm2];
+		Cons[mfbp] = 0.0e0;  // psi
+
+		for(int n=0; n<ncomp; n++){
+			Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve2]; // composition
+		}
+		double css = Prim[ncsp]*Prim[ncsp];
+		double cts =  css // c_s^2*c_a^2;
+		+ ( Prim[nbm1]*Prim[nbm1]  
+				+Prim[nbm2]*Prim[nbm2]  
+				+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
+
+		Cons[mcsp] = sqrt((cts +sqrt(cts*cts
+						-4.0e0*css*Prim[nbm2]*Prim[nbm2]  //direction dependent
+						/Prim[nden])   
+				  )/2.0e0);
+		Cons[mvel] = Prim[nve2];//direction dependent
+		Cons[mpre] = ptl;
 	};
 
 	auto Prim2Cons3 = [] (
 			const double (&Prim)[nprim], 
 			double (&Cons)[2*mconsv+madd])
 	{
-	  //direction dependent v,w,u
-	Cons[mudn] = Prim[nden]; // rho
-	Cons[muvv] = Prim[nve1]*Prim[nden]; // rho v_x
-	Cons[muvw] = Prim[nve2]*Prim[nden]; // rho v_y
-	Cons[muvu] = Prim[nve3]*Prim[nden]; // rho v_z
-        Cons[muet] = Prim[nene]*Prim[nden]  // e_i
-	              +0.5e0*Prim[nden]*(                  
-                          +Prim[nve1]*Prim[nve1]                 
-                          +Prim[nve2]*Prim[nve2]                 
-                          +Prim[nve3]*Prim[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prim[nbm1]*Prim[nbm1]                 
-                          +Prim[nbm2]*Prim[nbm2]                 
-                          +Prim[nbm3]*Prim[nbm3]); // + B^2/2
+		//direction dependent v,w,u
+		Cons[mudn] = Prim[nden]; // rho
+		Cons[muvv] = Prim[nve1]*Prim[nden]; // rho v_x
+		Cons[muvw] = Prim[nve2]*Prim[nden]; // rho v_y
+		Cons[muvu] = Prim[nve3]*Prim[nden]; // rho v_z
+		Cons[muet] = Prim[nene]*Prim[nden]  // e_i
+			+0.5e0*Prim[nden]*(                  
+					+Prim[nve1]*Prim[nve1]                 
+					+Prim[nve2]*Prim[nve2]                 
+					+Prim[nve3]*Prim[nve3])  // + rho v^2/2
+			+0.5e0*             (                 
+					+Prim[nbm1]*Prim[nbm1]                 
+					+Prim[nbm2]*Prim[nbm2]                 
+					+Prim[nbm3]*Prim[nbm3]); // + B^2/2
 
-	Cons[mubv] = Prim[nbm1]; // b_x
-	Cons[mubw] = Prim[nbm2]; // b_y
-	Cons[mubu] = Prim[nbm3]; // b_z
-	Cons[mubp] = Prim[nbps]; // psi
-	for(int n=0; n<ncomp;n++){
-	  Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
-	}
-	// total pressure
-        double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
+		//direction dependent v,w,u
+		Cons[mubv] = Prim[nbm1]; // b_x
+		Cons[mubw] = Prim[nbm2]; // b_y
+		Cons[mubu] = Prim[nbm3]; // b_z
+		Cons[mubp] = Prim[nbps]; // psi
+		for(int n=0; n<ncomp;n++){
+			Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
+		}
+		// total pressure
+		double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
 				+Prim[nbm2]*Prim[nbm2]
 				+Prim[nbm3]*Prim[nbm3])/2.0e0;
-	//direction dependent, nve3 or nbm3
-	Cons[mfdn] = Prim[nden]*Prim[nve3];
-	Cons[mfvv] = Prim[nden]*Prim[nve1]*Prim[nve3] 
-	                       -Prim[nbm1]*Prim[nbm3];
-	Cons[mfvw] = Prim[nden]*Prim[nve2]*Prim[nve3]
-      	                       -Prim[nbm2]*Prim[nbm3];
-        Cons[mfvu] = Prim[nden]*Prim[nve3]*Prim[nve3]
-	                 + ptl -Prim[nbm3]*Prim[nbm3]; // p diagnonal
-        Cons[mfet] = (Cons[muet]+ptl)*Prim[nve3]
-                           -( Prim[nbm1]*Prim[nve1]
-                             +Prim[nbm2]*Prim[nve2]
-			     +Prim[nbm3]*Prim[nve3])*Prim[nbm3];
+		//direction dependent, nve3 or nbm3
+		//direction dependent v,w,u
+		Cons[mfdn] = Prim[nden]*Prim[nve3];
+		Cons[mfvv] = Prim[nden]*Prim[nve1]*Prim[nve3] 
+		                       -Prim[nbm1]*Prim[nbm3];
+		Cons[mfvw] = Prim[nden]*Prim[nve2]*Prim[nve3]
+		                       -Prim[nbm2]*Prim[nbm3];
+		Cons[mfvu] = Prim[nden]*Prim[nve3]*Prim[nve3]
+		                 + ptl -Prim[nbm3]*Prim[nbm3]; // p diagnonal
+		Cons[mfet] =      (Cons[muet]+ptl)*Prim[nve3]
+			-( Prim[nbm1]*Prim[nve1]
+			   +Prim[nbm2]*Prim[nve2]
+			   +Prim[nbm3]*Prim[nve3])*Prim[nbm3];
 
-	// direction dependent 1, 3, 2, 3
-	Cons[mfbu] = 0.0e0;
-	Cons[mfbv] =  Prim[nbm1]*Prim[nve3]
-	              - Prim[nve1]*Prim[nbm3];
-	Cons[mfbw] =  Prim[nbm2]*Prim[nve3]
-	              - Prim[nve2]*Prim[nbm3];
-	Cons[mfbp] = 0.0e0;  // psi
-	
-	for(int n=0; n<ncomp;n++){
-	  Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve3]; // composition
-	}
-	double css = Prim[ncsp]*Prim[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Prim[nbm1]*Prim[nbm1]  
-                +Prim[nbm2]*Prim[nbm2]  
-		+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
+		// direction dependent 1, 3, 2, 3
+		Cons[mfbu] = 0.0e0;
+		Cons[mfbv] =  Prim[nbm1]*Prim[nve3]
+			- Prim[nve1]*Prim[nbm3];
+		Cons[mfbw] =  Prim[nbm2]*Prim[nve3]
+			- Prim[nve2]*Prim[nbm3];
+		Cons[mfbp] = 0.0e0;  // psi
 
-         Cons[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prim[nbm3]*Prim[nbm3]  //direction dependent
-                                            /Prim[nden])   
-			      )/2.0e0);
-         Cons[mvel] = Prim[nve3]; //direction dependent
-         Cons[mpre] = ptl;
+		for(int n=0; n<ncomp;n++){
+			Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nve3]; // composition
+		}
+		double css = Prim[ncsp]*Prim[ncsp];
+		double cts =  css // c_s^2*c_a^2;
+		+ ( Prim[nbm1]*Prim[nbm1]  
+				+Prim[nbm2]*Prim[nbm2]  
+				+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
+
+		Cons[mcsp] = sqrt((cts +sqrt(cts*cts
+						-4.0e0*css*Prim[nbm3]*Prim[nbm3]  //direction dependent
+						/Prim[nden])   
+				  )/2.0e0);
+		Cons[mvel] = Prim[nve3]; //direction dependent
+		Cons[mpre] = ptl;
 	};
 
 	auto CalcFlux = [](
