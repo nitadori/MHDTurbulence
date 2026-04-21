@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
     SetBoundaryCondition(P,Bs,Br);
     EvaluateCh();
 
-#if 1
+#if 0
     GetNumericalFlux1(G,P,Fx);
 #else
     GetNumericalFluxD(1, G,P,Fx);
@@ -252,14 +252,13 @@ int main(int argc, char **argv) {
 #if 0
     GetNumericalFlux2(G,P,Fy);
 #else
-    // GetNumericalFluxD(2, G,P,Fx);
-    GetNumericalFlux2a(G,P,Fy);
+    GetNumericalFluxD(2, G,P,Fy);
 #endif
 
-#if 1
+#if 0
     GetNumericalFlux3(G,P,Fz);
 #else
-    GetNumericalFluxD(3, G,P,Fx);
+    GetNumericalFluxD(3, G,P,Fz);
 #endif
 
     UpdateConservU(G,Fx,Fy,Fz,U);

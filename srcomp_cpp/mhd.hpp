@@ -206,8 +206,6 @@ namespace hydflux_mod {
   void GetNumericalFlux2(const GridArray<double>& G,const FieldArray<double>& P,FieldArray<double>& Fy);
   void GetNumericalFlux3(const GridArray<double>& G,const FieldArray<double>& P,FieldArray<double>& Fz);
   void GetNumericalFluxD(const int dir, const GridArray<double>& G,const FieldArray<double>& P,FieldArray<double>& Fz);
-  void GetNumericalFlux2a(const GridArray<double>& G,const FieldArray<double>& P,FieldArray<double>& Fy);
-  void GetNumericalFlux3a(const GridArray<double>& G,const FieldArray<double>& P,FieldArray<double>& Fy);
   void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,const FieldArray<double>& Fy,const FieldArray<double>& Fz,FieldArray<double>& U);
   void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P);
   void ControlTimestep(const GridArray<double>& G);
