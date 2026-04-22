@@ -1456,8 +1456,8 @@ void GetNumericalFluxD(
 	if(2 == idir){
 #pragma omp target teams distribute parallel for collapse(3)
 		for (int k=ks; k<=ke; k++){
-			for (int i=is; i<=ie; i++) {
-				for (int j=js; j<=je+1; j++){
+			for (int j=js; j<=je+1; j++){
+				for (int i=is; i<=ie; i++) {
 					double Pleftc1[nprim];
 					double Pleftc2[nprim];
 					double Prigtc1[nprim];
@@ -1496,9 +1496,10 @@ void GetNumericalFluxD(
 	}
 
 	if(3 == idir){
+#pragma omp target teams distribute parallel for collapse(3)
 		for(int j=js; j<=je; ++j){
-			for(int i=is; i<=ie; ++i){
-				for(int k=ks; k<=ke+1; ++k){
+			for(int k=ks; k<=ke+1; ++k){
+				for(int i=is; i<=ie; ++i){
 					double Pleftc1[nprim];
 					double Pleftc2[nprim];
 					double Prigtc1[nprim];
