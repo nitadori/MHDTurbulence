@@ -1060,7 +1060,6 @@ void GetNumericalFluxD(
 			const int mfv1,
 			const int mfv2,
 			const int mfv3,
-			const int mfvp,
 			const int nved,
 			const int nbmd,
 			const int nvef, // f = d + 1 (mod 3)
@@ -1090,9 +1089,7 @@ void GetNumericalFluxD(
 			Cons[must+n] = rho*Prim[nst+n]; // composition
 		}
 		// total pressure
-		double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
-				+Prim[nbm2]*Prim[nbm2]
-				+Prim[nbm3]*Prim[nbm3])/2.0e0;
+		double  ptl = Prim[npre] + bsq/2.0e0;
 
 		// direction dependent, nve1 or nbm1
 		// direction dependent mfv-u,v,w
@@ -1105,7 +1102,7 @@ void GetNumericalFluxD(
 		                  -Prim[nbm3]*Prim[nbmd];
 		Cons[mfet] = (Cons[muet]+ptl)*Prim[nved]
 		                         -bsq*Prim[nbmd];
-		Cons[mfvp] += ptl;
+		Cons[mfvu] += ptl;
 
 		// direction dependent 2, 1, 3, 1
 		Cons[mfbu] =  0.0e0;
@@ -1121,9 +1118,7 @@ void GetNumericalFluxD(
 		}
 		double css = Prim[ncsp]*Prim[ncsp];
 		double cts =  css // c_s^2*c_a^2;
-		+ ( Prim[nbm1]*Prim[nbm1]  
-				+Prim[nbm2]*Prim[nbm2]  
-				+Prim[nbm3]*Prim[nbm3] )*rhoinv;
+			+ bsq*rhoinv;
 
 		// direction dependent, nve1 or nbm1
 		Cons[mcsp] = sqrt((cts +sqrt(cts*cts
@@ -1205,7 +1200,6 @@ void GetNumericalFluxD(
 				muvu, muvv, muvw,
 				mubu, mubv, mubw,
 				mfvu, mfvv, mfvw,
-				mfvu,
 				nve1, nbm1,
 				nve2, nbm2,
 				nve3, nbm3);
@@ -1289,7 +1283,6 @@ void GetNumericalFluxD(
 				muvw, muvu, muvv,
 				mubw, mubu, mubv,
 				mfvw, mfvu, mfvv,
-				mfvu,
 				nve2, nbm2,
 				nve3, nbm3,
 				nve1, nbm1);
@@ -1370,7 +1363,6 @@ void GetNumericalFluxD(
 				muvv, muvw, muvu,
 				mubv, mubw, mubu,
 				mfvv, mfvw, mfvu,
-				mfvu,
 				nve3, nbm3,
 				nve1, nbm1,
 				nve2, nbm2);
