@@ -1196,6 +1196,7 @@ void GetNumericalFluxD(
 		Cons[mvel] = Prim[nve1]; //direction dependent
 		Cons[mpre] = ptl;
 #else
+		// u,v,w = x,y,z
 		Prim2ConsD(Prim, Cons,
 				muvu, muvv, muvw,
 				mubu, mubv, mubw,
@@ -1279,6 +1280,7 @@ void GetNumericalFluxD(
 		Cons[mvel] = Prim[nve2];//direction dependent
 		Cons[mpre] = ptl;
 #else
+		// u,v,w = y,z,x
 		Prim2ConsD(Prim, Cons,
 				muvw, muvu, muvv,
 				mubw, mubu, mubv,
@@ -1359,6 +1361,7 @@ void GetNumericalFluxD(
 		Cons[mvel] = Prim[nve3]; //direction dependent
 		Cons[mpre] = ptl;
 #else
+		// u,v,w = z,x,y
 		Prim2ConsD(Prim, Cons,
 				muvv, muvw, muvu,
 				mubv, mubw, mubu,

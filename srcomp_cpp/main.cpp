@@ -245,19 +245,11 @@ int main(int argc, char **argv) {
 
 #if 0
     GetNumericalFlux1(G,P,Fx);
-#else
-    GetNumericalFluxD(1, G,P,Fx);
-#endif
-
-#if 0
     GetNumericalFlux2(G,P,Fy);
-#else
-    GetNumericalFluxD(2, G,P,Fy);
-#endif
-
-#if 0
     GetNumericalFlux3(G,P,Fz);
 #else
+    GetNumericalFluxD(1, G,P,Fx);
+    GetNumericalFluxD(2, G,P,Fy);
     GetNumericalFluxD(3, G,P,Fz);
 #endif
 
