@@ -1068,20 +1068,18 @@ void GetNumericalFluxD(
 			const int nveb, // b = d - 1 (mod 3)
 			const int nbmb)
 	{
+		const double rho = Prim[nden];
+		const double rhoinv = 1.0 / rho;
+		const double vsq = Norm2(Prim[nve1], Prim[nve2], Prim[nve3]);
+		const double bsq = Norm2(Prim[nbm1], Prim[nbm2], Prim[nbm3]);
 		// direction dependent u,v,w
-		Cons[mudn] = Prim[nden]; // rho
-		Cons[muv1] = Prim[nve1]*Prim[nden]; // rho v_x
-		Cons[muv2] = Prim[nve2]*Prim[nden]; // rho v_y
-		Cons[muv3] = Prim[nve3]*Prim[nden]; // rho v_z
-		Cons[muet] = Prim[nene]*Prim[nden]  // e_i
-			+0.5e0*Prim[nden]*(                  
-					+Prim[nve1]*Prim[nve1]                 
-					+Prim[nve2]*Prim[nve2]                 
-					+Prim[nve3]*Prim[nve3])  // + rho v^2/2
-			+0.5e0*             (                 
-					+Prim[nbm1]*Prim[nbm1]                 
-					+Prim[nbm2]*Prim[nbm2]                 
-					+Prim[nbm3]*Prim[nbm3]); // + B^2/2
+		Cons[mudn] = rho; // rho
+		Cons[muv1] = rho*Prim[nve1]; // rho v_x
+		Cons[muv2] = rho*Prim[nve2]; // rho v_y
+		Cons[muv3] = rho*Prim[nve3]; // rho v_z
+		Cons[muet] = rho*Prim[nene]  // e_i
+			+0.5e0*rho*vsq  // + rho v^2/2
+			+0.5e0*    bsq; // + B^2/2
 
 		// direction dependent u,v,w
 		Cons[mub1] = Prim[nbm1]; // b_x
@@ -1089,7 +1087,7 @@ void GetNumericalFluxD(
 		Cons[mub3] = Prim[nbm3]; // b_z
 		Cons[mubp] = Prim[nbps]; // psi
 		for(int n=0; n<ncomp;n++){
-			Cons[must+n] = Prim[nden]*Prim[nst+n]; // composition
+			Cons[must+n] = rho*Prim[nst+n]; // composition
 		}
 		// total pressure
 		double  ptl = Prim[npre] + ( Prim[nbm1]*Prim[nbm1]
@@ -1098,17 +1096,15 @@ void GetNumericalFluxD(
 
 		// direction dependent, nve1 or nbm1
 		// direction dependent mfv-u,v,w
-		Cons[mfdn] = Prim[nden]           *Prim[nved];
-		Cons[mfv1] = Prim[nden]*Prim[nve1]*Prim[nved] 
-		                       -Prim[nbm1]*Prim[nbmd];// p diagnonal
-		Cons[mfv2] = Prim[nden]*Prim[nve2]*Prim[nved]
-		                       -Prim[nbm2]*Prim[nbmd];
-		Cons[mfv3] = Prim[nden]*Prim[nve3]*Prim[nved]
-		                       -Prim[nbm3]*Prim[nbmd];
-		Cons[mfet] =      (Cons[muet]+ptl)*Prim[nved]
-		         -( Prim[nbm1]*Prim[nve1]
-		           +Prim[nbm2]*Prim[nve2]
-		           +Prim[nbm3]*Prim[nve3])*Prim[nbmd];
+		Cons[mfdn] =   rho           *Prim[nved];
+		Cons[mfv1] =   rho*Prim[nve1]*Prim[nved] 
+		                  -Prim[nbm1]*Prim[nbmd];// p diagnonal
+		Cons[mfv2] =   rho*Prim[nve2]*Prim[nved]
+		                  -Prim[nbm2]*Prim[nbmd];
+		Cons[mfv3] =   rho*Prim[nve3]*Prim[nved]
+		                  -Prim[nbm3]*Prim[nbmd];
+		Cons[mfet] = (Cons[muet]+ptl)*Prim[nved]
+		                         -bsq*Prim[nbmd];
 		Cons[mfvp] += ptl;
 
 		// direction dependent 2, 1, 3, 1
@@ -1121,18 +1117,18 @@ void GetNumericalFluxD(
 
 		for(int n=0; n<ncomp;n++){
 			// direction dependent, nve1
-			Cons[mfst+n] = Prim[nden]*Prim[nst+n]*Prim[nved]; // composition
+			Cons[mfst+n] = rho*Prim[nst+n]*Prim[nved]; // composition
 		}
 		double css = Prim[ncsp]*Prim[ncsp];
 		double cts =  css // c_s^2*c_a^2;
 		+ ( Prim[nbm1]*Prim[nbm1]  
 				+Prim[nbm2]*Prim[nbm2]  
-				+Prim[nbm3]*Prim[nbm3] )/Prim[nden];
+				+Prim[nbm3]*Prim[nbm3] )*rhoinv;
 
 		// direction dependent, nve1 or nbm1
 		Cons[mcsp] = sqrt((cts +sqrt(cts*cts
 						-4.0e0*css*Prim[nbmd]*Prim[nbmd]  //direction dependent
-						/Prim[nden])   
+						*rhoinv)   
 				  )/2.0e0);
 		Cons[mvel] = Prim[nved]; //direction dependent
 		Cons[mpre] = ptl;
