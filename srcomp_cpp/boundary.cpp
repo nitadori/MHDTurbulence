@@ -30,9 +30,9 @@ namespace boundary_mod {
   int boundary_zin  = config::boundary_zin;
   int boundary_zout = config::boundary_zout;
 
-#pragma omp declare target
+// #pragma omp declare target
   BoundaryArray<double> Bs,Br;
-#pragma omp end declare target 
+// #pragma omp end declare target 
 
 #if 0
 auto assocb = [&](void* host_ptr, size_t bytes, int dev) {
@@ -153,6 +153,9 @@ void DeallocateBoundaryVariables(BoundaryArray<double>& Bs,BoundaryArray<double>
 #pragma omp target exit data map (delete: Br.Xs_data[0:Br.size1], Br.Xe_data[0: Br.size1])
 #pragma omp target exit data map (delete: Br.Ys_data[0:Br.size2], Br.Ye_data[0: Br.size2])
 #pragma omp target exit data map (delete: Br.Zs_data[0:Br.size3], Br.Ze_data[0: Br.size3])
+
+  Bs.deallocate();
+  Br.deallocate();
 }
 
 

@@ -283,6 +283,7 @@ int main(int argc, char **argv) {
   if (myid_w == 0) printf("program has been finished\n");
 
   DeallocateHydroVariables(G,U,Fx,Fy,Fz,P);
+  DeallocateBoundaryVariables(Bs, Br);
 
   Kokkos::finalize();
   FinalizeMPI();

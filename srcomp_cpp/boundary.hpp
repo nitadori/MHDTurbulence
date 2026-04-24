@@ -22,7 +22,7 @@ namespace boundary_mod {
   extern int boundary_yin, boundary_yout;
   extern int boundary_zin, boundary_zout;
 
-
+#define VIEW_BOUNDARY
   template <typename T>
   class BoundaryArray {
   public:
@@ -41,6 +41,7 @@ namespace boundary_mod {
     BoundaryArray(int nv_,int ng_,int n3_, int n2_, int n1_) {
       allocate(nv_,ng_,n3_,n2_,n1_);
     }
+#ifndef VIEW_BOUNDARY
     void allocate(int nv_,int ng_,int n3_, int n2_, int n1_) {
       nv = nv_;ng = ng_; n3 = n3_; n2 = n2_; n1 = n1_;
       size1 = static_cast<size_t>(nv) * n3 * n2 * ng;
@@ -66,7 +67,64 @@ namespace boundary_mod {
     inline const T& Zs(int n, int k, int j, int i) const noexcept { return Zs_data[((n*ng + k)*n2 + j)*n1 + i]; }
     inline       T& Ze(int n, int k, int j, int i)       noexcept { return Ze_data[((n*ng + k)*n2 + j)*n1 + i]; }
     inline const T& Ze(int n, int k, int j, int i) const noexcept { return Ze_data[((n*ng + k)*n2 + j)*n1 + i]; }
-    
+#else
+    using DView = Kokkos::View<T****, Kokkos::LayoutLeft>;
+    using HView = typename DView::HostMirror;
+    DView d_Xs, d_Xe, d_Ys, d_Ye, d_Zs, d_Ze;
+    HView h_Xs, h_Xe, h_Ys, h_Ye, h_Zs, h_Ze;
+
+    void allocate(int nv_,int ng_,int n3_, int n2_, int n1_) {
+      nv = nv_;ng = ng_; n3 = n3_; n2 = n2_; n1 = n1_;
+
+      d_Xs = DView("Xs", ng, nv, n2, n3);
+      d_Xe = DView("Xe", ng, nv, n2, n3);
+      d_Ys = DView("Ys", n1, nv, ng, n3);
+      d_Ye = DView("Ye", n1, nv, ng, n3);
+      d_Zs = DView("Zs", n1, nv, n2, ng);
+      d_Ze = DView("Ze", n1, nv, n2, ng);
+
+      h_Xs = Kokkos::create_mirror_view(d_Xs);
+      h_Xe = Kokkos::create_mirror_view(d_Xe);
+      h_Ys = Kokkos::create_mirror_view(d_Ys);
+      h_Ye = Kokkos::create_mirror_view(d_Ye);
+      h_Zs = Kokkos::create_mirror_view(d_Zs);
+      h_Ze = Kokkos::create_mirror_view(d_Ze);
+      
+      Xs_data = h_Xs.data();
+      Xe_data = h_Xe.data();
+      Ys_data = h_Ys.data();
+      Ye_data = h_Ye.data();
+      Zs_data = h_Zs.data();
+      Ze_data = h_Ze.data();
+
+      size1 = d_Xs.size();
+      size2 = d_Ys.size();
+      size3 = d_Zs.size();
+
+#if 0
+      printf("(%p:%p),(%p:%p),(%p:%p)\n",
+	      Xs_data, Xe_data, Ys_data, Ye_data, Zs_data, Ze_data);
+#endif
+    }
+
+    inline       T& Xs(int n, int k, int j, int i)       noexcept { return h_Xs(i, n, j, k); }
+    inline const T& Xs(int n, int k, int j, int i) const noexcept { return h_Xs(i, n, j, k); }
+    inline       T& Xe(int n, int k, int j, int i)       noexcept { return h_Xe(i, n, j, k); }
+    inline const T& Xe(int n, int k, int j, int i) const noexcept { return h_Xe(i, n, j, k); }
+    inline       T& Ys(int n, int k, int j, int i)       noexcept { return h_Ys(i, n, j, k); }
+    inline const T& Ys(int n, int k, int j, int i) const noexcept { return h_Ys(i, n, j, k); }
+    inline       T& Ye(int n, int k, int j, int i)       noexcept { return h_Ye(i, n, j, k); }
+    inline const T& Ye(int n, int k, int j, int i) const noexcept { return h_Ye(i, n, j, k); }
+    inline       T& Zs(int n, int k, int j, int i)       noexcept { return h_Zs(i, n, j, k); }
+    inline const T& Zs(int n, int k, int j, int i) const noexcept { return h_Zs(i, n, j, k); }
+    inline       T& Ze(int n, int k, int j, int i)       noexcept { return h_Ze(i, n, j, k); }
+    inline const T& Ze(int n, int k, int j, int i) const noexcept { return h_Ze(i, n, j, k); }
+#endif
+
+    void deallocate(){
+	    d_Xs = d_Xe = d_Ys = d_Ye = d_Zs = d_Ze = DView();
+	    h_Xs = h_Xe = h_Ys = h_Ye = h_Zs = h_Ze = HView();
+    }
   };
 
   extern BoundaryArray<double> Bs,Br; 
