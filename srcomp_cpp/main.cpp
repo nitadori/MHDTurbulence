@@ -262,9 +262,9 @@ int main(int argc, char **argv) {
     if (! config::benchmarkmode) Output(usualoutput);
     //if (!nooutput) Output1D(usualoutput);
 
-    if(time_sim > time_max) break;
+    // if(time_sim > time_max) break;
+    if(time_sim > time_max || step >= 150) break;
     
-    if(step > 10) break; // debug for deallocate
   }
 
   //DeallocateHydroVariables(U,Fx,Fy,Fz,P);
@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
   std::chrono::duration<double> elapsed = time_end - time_beg;
   if (myid_w == 0) printf("exiting main loop time=%e, step=%i\n",time_sim,step);
   if (myid_w == 0) printf("sim time [s]: %e\n", elapsed.count());
-  if (myid_w == 0) printf("time/count/cell : %e\n", elapsed.count()/(ngrid1*ngrid2*ngrid3)/stepmax);
+  if (myid_w == 0) printf("time/count/cell : %e\n", elapsed.count()/(ngrid1*ngrid2*ngrid3)/(step+1));
 
   // Force final output (Fortran: is_final=.true.; call Output(forceoutput))
   Output(forceoutput);
