@@ -17,6 +17,7 @@ namespace hydflux_mod {
   using index_t = int;     // 必要なら 32/64 を切り替え
   using size_t  = std::size_t;
   
+#define GRID_VIEW
   template <typename T>
   class GridArray {
   public:
@@ -32,6 +33,7 @@ namespace hydflux_mod {
     GridArray(int n3_, int n2_, int n1_) {
       allocate(n3_,n2_,n1_);
     }
+#ifndef GRID_VIEW
     void allocate(int n3_, int n2_, int n1_) {
       n3 = n3_; n2 = n2_; n1 = n1_;
       size = static_cast<size_t>(n1);
@@ -62,6 +64,44 @@ namespace hydflux_mod {
     // const
     inline const T& x3a(int k) const noexcept { return x3a_data[k]; }
     inline const T& x3b(int k) const noexcept { return x3b_data[k]; }
+#else
+    using DView = Kokkos::View<T**, Kokkos::LayoutLeft>;
+    using HView = typename DView::HostMirror;
+
+    DView d1, d2, d3;
+    HView h1, h2, h3;
+
+    void allocate(int n3_, int n2_, int n1_) {
+      n3 = n3_; n2 = n2_; n1 = n1_;
+
+      d1 = DView("Grid_x", n1, 2);
+      d2 = DView("Grid_x", n2, 2);
+      d3 = DView("Grid_x", n3, 2);
+
+      h1 = Kokkos::create_mirror_view(d1);
+      h2 = Kokkos::create_mirror_view(d2);
+      h3 = Kokkos::create_mirror_view(d3);
+    }
+
+    void deallocate() {
+	    h1 = h2 = h3 = HView();
+	    d1 = d2 = d3 = DView();
+    }
+
+    T& x1a(int i) noexcept { return h1(i, 0); }
+    T& x1b(int i) noexcept { return h1(i, 1); }
+    T& x2a(int j) noexcept { return h2(j, 0); }
+    T& x2b(int j) noexcept { return h2(j, 1); }
+    T& x3a(int k) noexcept { return h3(k, 0); }
+    T& x3b(int k) noexcept { return h3(k, 1); }
+
+    const T& x1a(int i) const noexcept { return h1(i, 0); }
+    const T& x1b(int i) const noexcept { return h1(i, 1); }
+    const T& x2a(int j) const noexcept { return h2(j, 0); }
+    const T& x2b(int j) const noexcept { return h2(j, 1); }
+    const T& x3a(int k) const noexcept { return h3(k, 0); }
+    const T& x3b(int k) const noexcept { return h3(k, 1); }
+#endif
 
   };
 
