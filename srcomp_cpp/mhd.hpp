@@ -101,6 +101,12 @@ namespace hydflux_mod {
     const T& x2b(int j) const noexcept { return h2(j, 1); }
     const T& x3a(int k) const noexcept { return h3(k, 0); }
     const T& x3b(int k) const noexcept { return h3(k, 1); }
+
+    void h2d(){
+	    Kokkos::deep_copy(d1, h1);
+	    Kokkos::deep_copy(d2, h2);
+	    Kokkos::deep_copy(d3, h3);
+    }
 #endif
 
   };
@@ -208,6 +214,13 @@ namespace hydflux_mod {
 #ifdef VIEW_LAYOUT_IJKN
 	    return d_view(i, j, k, n);
 #endif
+    }
+
+    void h2d(){
+	    Kokkos::deep_copy(d_view, h_view);
+    }
+    void d2h(){
+	    Kokkos::deep_copy(h_view, d_view);
     }
 #endif // Kokkos view version?
   };
