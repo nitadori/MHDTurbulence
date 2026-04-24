@@ -264,6 +264,7 @@ int main(int argc, char **argv) {
 
     if(time_sim > time_max) break;
     
+    if(step > 10) break; // debug for deallocate
   }
 
   //DeallocateHydroVariables(U,Fx,Fy,Fz,P);
@@ -280,6 +281,8 @@ int main(int argc, char **argv) {
   //if (!nooutput) Output1D(forceoutput);
   
   if (myid_w == 0) printf("program has been finished\n");
+
+  DeallocateHydroVariables(G,U,Fx,Fy,Fz,P);
 
   Kokkos::finalize();
   FinalizeMPI();

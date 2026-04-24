@@ -134,6 +134,12 @@ void DeallocateHydroVariables(GridArray<double>& G,FieldArray<double>& U,FieldAr
 #pragma omp target exit data map (delete:Fz.data[0:Fz.size],Fz.n1,Fz.n2,Fz.n3,Fz.nv)
 #pragma omp target exit data map (delete: P.data[0: P.size], P.n1, P.n2, P.n3, P.nv)
 #endif
+	G.deallocate();
+	U.deallocate();
+	Fx.deallocate();
+	Fy.deallocate();
+	Fz.deallocate();
+	P.deallocate();
 
 }
 
