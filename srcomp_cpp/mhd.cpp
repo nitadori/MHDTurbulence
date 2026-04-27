@@ -1587,6 +1587,7 @@ void GetNumericalFluxD(
 	}
 
 	if(3 == idir){
+#if 0
 #pragma omp target teams distribute parallel for collapse(3)
 		for(int j=js; j<=je; ++j){
 			for(int k=ks; k<=ke+1; ++k){
@@ -1628,6 +1629,47 @@ void GetNumericalFluxD(
 				}
 			}
 		}
+#else
+		Kokkos::parallel_for("Flux3",
+		Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, ks, js}, {ie+1, ke+2, je+1}),
+		KOKKOS_LAMBDA(const int i, const int k, const int j) {
+			auto Fz = F; // avoid const
+			double Pleftc1[nprim];
+			double Pleftc2[nprim];
+			double Prigtc1[nprim];
+			double Prigtc2[nprim];  
+
+			double numflux [mconsv];
+
+			double Clefte [2*mconsv+madd];
+			double Crigte [2*mconsv+madd];
+
+			for (int n=0; n<nprim; n++){
+				Pleftc1[n] = P(n,k-2,j,i);
+				Pleftc2[n] = P(n,k-1,j,i);
+				Prigtc1[n] = P(n,k  ,j,i);
+				Prigtc2[n] = P(n,k+1,j,i);
+			}
+			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons3);
+
+			Fz(mden,k,j,i) = numflux[mden];
+			Fz(mrv1,k,j,i) = numflux[mrvv];
+			Fz(mrv2,k,j,i) = numflux[mrvw];
+			Fz(mrv3,k,j,i) = numflux[mrvu];
+			Fz(meto,k,j,i) = numflux[meto];
+			Fz(mbm1,k,j,i) = numflux[mbmv];
+			Fz(mbm2,k,j,i) = numflux[mbmw];
+			//Fz(mbm3,k,j,i) = numflux[mbm];
+
+			Fz(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+					-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
+			Fz(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+				       -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
+			for(int n=0; n<ncomp;n++){
+				Fz(mst+n,k,j,i) = numflux[mst+n]; // composition
+			}
+		});
+#endif
 	}
 }
 
