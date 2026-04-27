@@ -1607,6 +1607,7 @@ void ControlTimestep(const GridArray<double>& G){
   const double huge = 1.0e90;
   double dtminl = huge;
 // #pragma omp target teams distribute parallel for reduction(min:dtminl) collapse(3)
+#if 0
   for (int k=ks; k<=ke; k++)
     for (int j=js; j<=je; j++)
       for (int i=is; i<=ie; i++) {
@@ -1626,6 +1627,22 @@ void ControlTimestep(const GridArray<double>& G){
 	  }*/
 	
       }
+#else
+	Kokkos::parallel_reduce("ControlTimestep",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k, double& dtminloc) {
+	  double ctot = sqrt(     P(ncsp,k,j,i)*P(ncsp,k,j,i)
+			  + (  P(nbm1,k,j,i)*P(nbm1,k,j,i)
+				  + P(nbm2,k,j,i)*P(nbm2,k,j,i)
+				  + P(nbm3,k,j,i)*P(nbm3,k,j,i) ) / P(nden,k,j,i)); 
+	  double dt= std::min({ (G.x1a(i+1)-G.x1a(i))/(std::abs(P(nve1,k,j,i))+ctot)
+			  ,(G.x2a(j+1)-G.x2a(j))/(std::abs(P(nve2,k,j,i))+ctot)
+			  ,(G.x3a(k+1)-G.x3a(k))/(std::abs(P(nve3,k,j,i))+ctot)});
+	  dtminloc = std::min(dtminloc, dt);
+	},
+	Kokkos::Min<double>(dtminl)
+	);
+#endif
   //  Here dtminl is in host
   double dtming;
   int myid_wg;
