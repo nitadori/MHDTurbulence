@@ -206,6 +206,14 @@ int main(int argc, char **argv) {
 
   InitializeMPI();
   Kokkos::initialize(argc, argv);
+
+#if  1
+  int nth = -1;
+#pragma omp parallel
+  nth = omp_get_num_threads();
+  printf("%d: %d threads\n", myid_w, nth);
+#endif
+
   
   if(myid_w == 0) printf("setup grids and fields\n");
   

@@ -1048,7 +1048,7 @@ void GetNumericalFluxD(
 		const int idir, 
 		const GridArray<double>&G,
 		const FieldArray<double>& P,
-		FieldArray<double>& F)
+		FieldArray<double> &F)
 {
 	auto Norm2 = [](const auto &x, const auto &y, const auto &z){
 		return x*x + y*y + z*z;
@@ -1419,6 +1419,7 @@ void GetNumericalFluxD(
 	};
 
 	if(1 == idir){
+#if 0
 #pragma omp target teams distribute parallel for collapse(3)
 		for (int k=ks; k<=ke; k++) {
 			for (int j=js; j<=je; j++){
@@ -1460,9 +1461,51 @@ void GetNumericalFluxD(
 				}
 			}
 		}
+#else
+		Kokkos::parallel_for("Flux1",
+		Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+2, je+1, ke+1}),
+		KOKKOS_LAMBDA(const int i, const int j, const int k) {
+			auto Fx = F; // avoid const
+			double Pleftc1[nprim];
+			double Pleftc2[nprim];
+			double Prigtc1[nprim];
+			double Prigtc2[nprim];  
+
+			double numflux [mconsv];
+
+			double Clefte [2*mconsv+madd];
+			double Crigte [2*mconsv+madd];
+
+			for (int n=0; n<nprim; n++){
+			Pleftc1[n] = P(n,k,j,i-2);
+			Pleftc2[n] = P(n,k,j,i-1);
+			Prigtc1[n] = P(n,k,j,i  );
+			Prigtc2[n] = P(n,k,j,i+1);
+			}
+			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons1);
+
+			Fx(mden,k,j,i) = numflux[mden];
+			Fx(mrv1,k,j,i) = numflux[mrvu];
+			Fx(mrv2,k,j,i) = numflux[mrvv];
+			Fx(mrv3,k,j,i) = numflux[mrvw];
+			Fx(meto,k,j,i) = numflux[meto];
+			//Fx(mbm1,k,j,i) = numflux[mbmu];
+			Fx(mbm2,k,j,i) = numflux[mbmv];
+			Fx(mbm3,k,j,i) = numflux[mbmw];
+
+			Fx(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+				-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
+			Fx(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+					-0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
+			for(int n=0; n<ncomp;n++){
+				Fx(mst+n,k,j,i) = numflux[mst+n]; // composition
+			}
+		});
+#endif
 	}
 
 	if(2 == idir){
+#if 0
 #pragma omp target teams distribute parallel for collapse(3)
 		for (int k=ks; k<=ke; k++){
 			for (int j=js; j<=je+1; j++){
@@ -1502,6 +1545,45 @@ void GetNumericalFluxD(
 				}// j-loop
 			}// k,i-loop
 		}
+#else
+		Kokkos::parallel_for("Flux2",
+		Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+2, ke+1}),
+		KOKKOS_LAMBDA(const int i, const int j, const int k) {
+			auto Fy = F; // avoid const
+			double Pleftc1[nprim];
+			double Pleftc2[nprim];
+			double Prigtc1[nprim];
+			double Prigtc2[nprim];	  
+			for (int n=0; n<nprim; n++){
+			Pleftc1[n] = P(n,k,j-2,i);
+			Pleftc2[n] = P(n,k,j-1,i);
+			Prigtc1[n] = P(n,k,j  ,i);
+			Prigtc2[n] = P(n,k,j+1,i);
+			}
+
+			double numflux [mconsv];
+			double Clefte [2*mconsv+madd];
+			double Crigte [2*mconsv+madd];
+			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons2);
+
+			Fy(mden,k,j,i) = numflux[mden];
+			Fy(mrv1,k,j,i) = numflux[mrvw];
+			Fy(mrv2,k,j,i) = numflux[mrvu];
+			Fy(mrv3,k,j,i) = numflux[mrvv];
+			Fy(meto,k,j,i) = numflux[meto];
+			Fy(mbm1,k,j,i) = numflux[mbmw];
+			//Fy(mbm2,k,j,i) = numflux[mbmu];
+			Fy(mbm3,k,j,i) = numflux[mbmv];
+
+			Fy(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+				-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
+			Fy(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+					-0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
+			for(int n=0; n<ncomp;n++){
+				Fy(mst+n,k,j,i) = numflux[mst+n]; // composition
+			}
+		});
+#endif
 	}
 
 	if(3 == idir){
