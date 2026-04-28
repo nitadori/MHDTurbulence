@@ -1677,6 +1677,7 @@ void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,cons
   //printf("pre Fy:%e %e %e %e\n",Fy(mden,ks,js,is),Fy(mrv3,ks,js,is),Fy(mbm3,ks,js,is),Fy(meto,ks,js,is));
   //printf("pre Fz:%e %e %e %e\n",Fz(mden,ks,js,is),Fz(mrv3,ks,js,is),Fz(mbm3,ks,js,is),Fz(meto,ks,js,is));
   
+#if 0
 #pragma omp target teams distribute parallel for collapse(4)
   for (int m=0; m<mconsv; m++)
     for (int k=ks; k<=ke; k++)
@@ -1687,6 +1688,17 @@ void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,cons
 			      +(Fz(m,k+1,j,i) - Fz(m,k,j,i)) / (G.x3a(k+1)-G.x3a(k)) );
   }
   //printf("aft U:%e %e %e %e\n",U(mden,ks,js,is),U(mrv1,ks,js,is),U(mbm1,ks,js,is),U(meto,ks,js,is));
+#else
+	Kokkos::parallel_for("UpdateConservU",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		for (int m=0; m<mconsv; m++) {
+			U.href(m,k,j,i) -= dt * ( (Fx(m,k,j,i+1) - Fx(m,k,j,i)) / (G.x1a(i+1)-G.x1a(i))
+			                         +(Fy(m,k,j+1,i) - Fy(m,k,j,i)) / (G.x2a(j+1)-G.x2a(j))
+			                         +(Fz(m,k+1,j,i) - Fz(m,k,j,i)) / (G.x3a(k+1)-G.x3a(k)) );
+		}
+	});
+#endif
 }
 
 
