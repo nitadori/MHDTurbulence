@@ -216,6 +216,27 @@ namespace hydflux_mod {
 #endif
     }
 
+    // copy captureでconstになったときでも書き込めるように
+    T& href(int n, int k, int j, int i) const noexcept {
+#ifdef VIEW_LAYOUT_INJK
+	    return h_view(i, n, j, k);
+#endif
+#ifdef VIEW_LAYOUT_IJKN
+	    return h_view(i, j, k, n);
+#endif
+    }
+
+    // 同上、デバイス版
+    T& dref(int n, int k, int j, int i) const noexcept {
+#ifdef VIEW_LAYOUT_INJK
+	    return d_view(i, n, j, k);
+#endif
+#ifdef VIEW_LAYOUT_IJKN
+	    return d_view(i, j, k, n);
+#endif
+    }
+
+
     void h2d(){
 	    Kokkos::deep_copy(d_view, h_view);
     }

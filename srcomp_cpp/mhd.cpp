@@ -1465,7 +1465,6 @@ void GetNumericalFluxD(
 		Kokkos::parallel_for("Flux1",
 		Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+2, je+1, ke+1}),
 		KOKKOS_LAMBDA(const int i, const int j, const int k) {
-			auto Fx = F; // avoid const
 			double Pleftc1[nprim];
 			double Pleftc2[nprim];
 			double Prigtc1[nprim];
@@ -1484,21 +1483,21 @@ void GetNumericalFluxD(
 			}
 			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons1);
 
-			Fx(mden,k,j,i) = numflux[mden];
-			Fx(mrv1,k,j,i) = numflux[mrvu];
-			Fx(mrv2,k,j,i) = numflux[mrvv];
-			Fx(mrv3,k,j,i) = numflux[mrvw];
-			Fx(meto,k,j,i) = numflux[meto];
-			//Fx(mbm1,k,j,i) = numflux[mbmu];
-			Fx(mbm2,k,j,i) = numflux[mbmv];
-			Fx(mbm3,k,j,i) = numflux[mbmw];
+			F.href(mden,k,j,i) = numflux[mden];
+			F.href(mrv1,k,j,i) = numflux[mrvu];
+			F.href(mrv2,k,j,i) = numflux[mrvv];
+			F.href(mrv3,k,j,i) = numflux[mrvw];
+			F.href(meto,k,j,i) = numflux[meto];
+			//F.href(mbm1,k,j,i) = numflux[mbmu];
+			F.href(mbm2,k,j,i) = numflux[mbmv];
+			F.href(mbm3,k,j,i) = numflux[mbmw];
 
-			Fx(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+			F.href(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
 				-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-			Fx(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+			F.href(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
 					-0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
 			for(int n=0; n<ncomp;n++){
-				Fx(mst+n,k,j,i) = numflux[mst+n]; // composition
+				F.href(mst+n,k,j,i) = numflux[mst+n]; // composition
 			}
 		});
 #endif
@@ -1549,7 +1548,6 @@ void GetNumericalFluxD(
 		Kokkos::parallel_for("Flux2",
 		Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+2, ke+1}),
 		KOKKOS_LAMBDA(const int i, const int j, const int k) {
-			auto Fy = F; // avoid const
 			double Pleftc1[nprim];
 			double Pleftc2[nprim];
 			double Prigtc1[nprim];
@@ -1566,21 +1564,21 @@ void GetNumericalFluxD(
 			double Crigte [2*mconsv+madd];
 			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons2);
 
-			Fy(mden,k,j,i) = numflux[mden];
-			Fy(mrv1,k,j,i) = numflux[mrvw];
-			Fy(mrv2,k,j,i) = numflux[mrvu];
-			Fy(mrv3,k,j,i) = numflux[mrvv];
-			Fy(meto,k,j,i) = numflux[meto];
-			Fy(mbm1,k,j,i) = numflux[mbmw];
-			//Fy(mbm2,k,j,i) = numflux[mbmu];
-			Fy(mbm3,k,j,i) = numflux[mbmv];
+			F.href(mden,k,j,i) = numflux[mden];
+			F.href(mrv1,k,j,i) = numflux[mrvw];
+			F.href(mrv2,k,j,i) = numflux[mrvu];
+			F.href(mrv3,k,j,i) = numflux[mrvv];
+			F.href(meto,k,j,i) = numflux[meto];
+			F.href(mbm1,k,j,i) = numflux[mbmw];
+			//F.href(mbm2,k,j,i) = numflux[mbmu];
+			F.href(mbm3,k,j,i) = numflux[mbmv];
 
-			Fy(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+			F.href(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
 				-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-			Fy(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+			F.href(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
 					-0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
 			for(int n=0; n<ncomp;n++){
-				Fy(mst+n,k,j,i) = numflux[mst+n]; // composition
+				F.href(mst+n,k,j,i) = numflux[mst+n]; // composition
 			}
 		});
 #endif
@@ -1633,7 +1631,6 @@ void GetNumericalFluxD(
 		Kokkos::parallel_for("Flux3",
 		Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, ks, js}, {ie+1, ke+2, je+1}),
 		KOKKOS_LAMBDA(const int i, const int k, const int j) {
-			auto Fz = F; // avoid const
 			double Pleftc1[nprim];
 			double Pleftc2[nprim];
 			double Prigtc1[nprim];
@@ -1652,21 +1649,21 @@ void GetNumericalFluxD(
 			}
 			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons3);
 
-			Fz(mden,k,j,i) = numflux[mden];
-			Fz(mrv1,k,j,i) = numflux[mrvv];
-			Fz(mrv2,k,j,i) = numflux[mrvw];
-			Fz(mrv3,k,j,i) = numflux[mrvu];
-			Fz(meto,k,j,i) = numflux[meto];
-			Fz(mbm1,k,j,i) = numflux[mbmv];
-			Fz(mbm2,k,j,i) = numflux[mbmw];
-			//Fz(mbm3,k,j,i) = numflux[mbm];
+			F.href(mden,k,j,i) = numflux[mden];
+			F.href(mrv1,k,j,i) = numflux[mrvv];
+			F.href(mrv2,k,j,i) = numflux[mrvw];
+			F.href(mrv3,k,j,i) = numflux[mrvu];
+			F.href(meto,k,j,i) = numflux[meto];
+			F.href(mbm1,k,j,i) = numflux[mbmv];
+			F.href(mbm2,k,j,i) = numflux[mbmw];
+			//F.href(mbm3,k,j,i) = numflux[mbm];
 
-			Fz(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+			F.href(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
 					-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-			Fz(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+			F.href(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
 				       -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
 			for(int n=0; n<ncomp;n++){
-				Fz(mst+n,k,j,i) = numflux[mst+n]; // composition
+				F.href(mst+n,k,j,i) = numflux[mst+n]; // composition
 			}
 		});
 #endif
