@@ -1708,6 +1708,7 @@ void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,cons
 void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P){
 
   //printf("U:et b1 b2 b3=%e %e %e %e\n",U(meto,ks,js,is),U(mbm1,ks,js,is),U(mbm2,ks,js,is),U(mbm3,ks,js,is));
+#if 0
 #pragma omp target teams distribute parallel for collapse(3)
   for (int k=ks; k<=ke; ++k)
     for (int j=js; j<=je; ++j)
@@ -1736,6 +1737,36 @@ void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P){
 	 }
 	 
       }
+#else
+	Kokkos::parallel_for("UpdatePrimitvP",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		const double rho =  U(mden,k,j,i);
+		const double rhoinv = 1.0 / rho;
+		P.href(nden,k,j,i) = rho;
+		P.href(nve1,k,j,i) = U(mrv1,k,j,i) * rhoinv;
+		P.href(nve2,k,j,i) = U(mrv2,k,j,i) * rhoinv;
+		P.href(nve3,k,j,i) = U(mrv3,k,j,i) * rhoinv;
+		double ekin = 0.5e0*( U(mrv1,k,j,i)*U(mrv1,k,j,i)
+				+U(mrv2,k,j,i)*U(mrv2,k,j,i)
+				+U(mrv3,k,j,i)*U(mrv3,k,j,i)) * rhoinv;
+		double emag = 0.5e0*( U(mbm1,k,j,i)*U(mbm1,k,j,i)
+				+U(mbm2,k,j,i)*U(mbm2,k,j,i)
+				+U(mbm3,k,j,i)*U(mbm3,k,j,i));
+		P.href(nene,k,j,i) =  (U(meto,k,j,i)-ekin-emag)/U(mden,k,j,i);//specific internal energy
+		//P.href(npre,k,j,i) =  U(mden,k,j,i) * csiso * csiso;
+		P.href(npre,k,j,i) = P(nene,k,j,i) * P(nden,k,j,i) * (gam-1.0); 
+		//P.href(ncsp,k,j,i) =  csiso;
+		P.href(ncsp,k,j,i) = sqrt(P(nene,k,j,i) * gam * (gam-1.0));
+		P.href(nbm1,k,j,i) =  U(mbm1,k,j,i);
+		P.href(nbm2,k,j,i) =  U(mbm2,k,j,i);
+		P.href(nbm3,k,j,i) =  U(mbm3,k,j,i);
+		P.href(nbps,k,j,i) =  U(mbps,k,j,i);
+		for(int n=0;n<ncomp;n++){
+			P.href(nst+n,k,j,i) = U(mst+n,k,j,i) * rhoinv;
+		}
+	});
+#endif
 }
 
 void ControlTimestep(const GridArray<double>& G){
