@@ -1612,6 +1612,7 @@ void EvaluateCh(){
 
 void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
   const double alphabp = 0.1e0;
+#if 0
 // #pragma omp target teams distribute parallel for collapse(3)
   for (int k=ks; k<=ke; k++)
     for (int j=js; j<=je; j++)
@@ -1620,6 +1621,15 @@ void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
 	double taui = alphabp * chg/dhl;
 	  U(mbps,k,j,i) = U(mbps,k,j,i) *(1.0e0-dt*taui);
       }
+#else
+	Kokkos::parallel_for("DampPsi",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		double dhl = std::min({G.x1a(i+1)-G.x1a(i), G.x2a(j+1)-G.x2a(j), G.x3a(k+1)-G.x3a(k)});
+		double taui = alphabp * chg/dhl;
+		U.href(mbps,k,j,i) = U(mbps,k,j,i) * (1.0e0-dt*taui);
+	});
+#endif
 }
 
 
