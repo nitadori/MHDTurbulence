@@ -257,7 +257,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     }
 #else
 	Kokkos::parallel_for("BR_XE",
-	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {ngh, jtot, ktot}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_out== periodicb) {
 			for (int n=0; n<nprim; n++){
@@ -312,8 +312,8 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
                 Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,0);
       }
 #else
-	Kokkos::parallel_for("BR_XS",
-	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	Kokkos::parallel_for("BR_XS2",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {ngh, jtot, ktot}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_xin == reflection) {
 			for (int n=0; n<nprim; n++){
@@ -356,8 +356,8 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
                 Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1);
       }
 #else
-	Kokkos::parallel_for("BR_XE",
-	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	Kokkos::parallel_for("BR_XE2",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {ngh, jtot, ktot}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_xout == reflection) {
 			for (int n=0; n<nprim; n++){
@@ -379,6 +379,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     const int bc_in  = boundary_yin;
     const int bc_out = boundary_yout;
 
+#if 0
     if (bc_in == periodicb) {
 #pragma omp target teams distribute parallel for collapse(4)
       for (int n=0; n<nprim; n++)
@@ -406,7 +407,28 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
             for (int i=0; i<itot; i++)
               Br.Ys(n,k,j,i) = Bs.Ye(n,k,0,i);
     }
+#else
+	Kokkos::parallel_for("BR_YS",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, ngh, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (bc_in == periodicb) {
+			for (int n=0; n<nprim; n++){
+				Br.Ys(n,k,j,i) = Bs.Ys(n,k,j,i);
+			}
+		} else if (bc_in == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Ys(n,k,j,i) = Bs.Ye(n,k,ngh-1-j,i);
+			}
+			Br.Ys(nve2,k,j,i) = -Br.Ys(nve2,k,j,i);
+		} else if (bc_in == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Ys(n,k,j,i) = Bs.Ye(n,k,0,i);
+			}
+		}
+	});
+#endif
 
+#if 0
     if (bc_out == periodicb) {
 #pragma omp target teams distribute parallel for collapse(4)
       for (int n=0; n<nprim; n++)
@@ -434,6 +456,26 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
             for (int i=0; i<itot; i++)
               Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1,i);
     }
+#else
+	Kokkos::parallel_for("BR_YE",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, ngh, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (bc_out == periodicb) {
+			for (int n=0; n<nprim; n++){
+				Br.Ye(n,k,j,i) = Bs.Ye(n,k,j,i);
+			}
+		} else if (bc_out == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1-j,i);
+			}
+			Br.Ye(nve2,k,j,i) = -Br.Ye(nve2,k,j,i);
+		} else if (bc_out == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1,i);
+			}
+		}
+	});
+#endif
   } else {
     // Ensure host copies of send buffers are up-to-date (Bs is produced on device)
 #pragma omp target update from(Bs.Ys_data[0:Bs.size2], Bs.Ye_data[0:Bs.size2])
@@ -447,6 +489,7 @@ if (n2m != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ys, Br.size2, MPI_DOUBLE, n2m, 2100, comm3d, &req[nreq++]);
       rc = MPI_Isend(h_Bs_Ye, Bs.size2, MPI_DOUBLE, n2m, 2200, comm3d, &req[nreq++]);
     } else {
+#if 0
       if (boundary_yin == reflection) {
 #pragma omp target teams distribute parallel for collapse(4)
         for (int n=0; n<nprim; n++)
@@ -467,12 +510,29 @@ if (n2m != MPI_PROC_NULL) {
               for (int i=0; i<itot; i++)
                 Br.Ys(n,k,j,i) = Bs.Ye(n,k,0,i);
       }
+#else
+	Kokkos::parallel_for("BR_YS2",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, ngh, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (boundary_yin == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Ys(n,k,j,i) = Bs.Ye(n,k,ngh-1-j,i);
+			}
+			Br.Ys(nve2,k,j,i) = -Br.Ys(nve2,k,j,i);
+		} else if (boundary_yin == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Ys(n,k,j,i) = Bs.Ye(n,k,0,i);
+			}
+		}
+	});
+#endif
     }
 
     if (n2p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ye, Br.size2, MPI_DOUBLE, n2p, 2200, comm3d, &req[nreq++]);
       rc = MPI_Isend(h_Bs_Ys, Bs.size2, MPI_DOUBLE, n2p, 2100, comm3d, &req[nreq++]);
     } else {
+#if 0
       if (boundary_yout == reflection) {
 #pragma omp target teams distribute parallel for collapse(4)
         for (int n=0; n<nprim; n++)
@@ -493,6 +553,22 @@ if (n2m != MPI_PROC_NULL) {
               for (int i=0; i<itot; i++)
                 Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1,i);
       }
+#else
+	Kokkos::parallel_for("BR_YE2",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, ngh, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (boundary_yout == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1-j,i);
+			}
+			Br.Ye(nve2,k,j,i) = -Br.Ye(nve2,k,j,i);
+		} else if (boundary_yout == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1,i);
+			}
+		}
+	});
+#endif
     }
   }
 

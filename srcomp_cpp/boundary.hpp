@@ -127,14 +127,11 @@ namespace boundary_mod {
 	    h_Xs = h_Xe = h_Ys = h_Ye = h_Zs = h_Ze = HView();
     }
 
-    void d2h_X(){
-	    Kokkos::deep_copy(h_Xs, d_Xs);
-	    Kokkos::deep_copy(h_Xe, d_Xe);
-    }
-    void h2d_X(){
-	    Kokkos::deep_copy(d_Xs, h_Xs);
-	    Kokkos::deep_copy(d_Xe, h_Xe);
-    }
+    void d2h_Xs(){ Kokkos::deep_copy(h_Xs, d_Xs); }
+    void d2h_Xe(){ Kokkos::deep_copy(h_Xe, d_Xe); }
+
+    void h2d_Xs(){ Kokkos::deep_copy(d_Xs, h_Xs); }
+    void h2d_Xe(){ Kokkos::deep_copy(d_Xe, h_Xe); }
   };
 
   extern BoundaryArray<double> Bs,Br; 
