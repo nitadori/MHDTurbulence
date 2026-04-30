@@ -175,6 +175,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     const int bc_out = boundary_xout;
 
     // Br.Xs : ghost at x-in  (left)
+#if 0
     if (bc_in == periodicb) {
 #pragma omp target teams distribute parallel for collapse(4)
       for (int n=0; n<nprim; n++)
@@ -203,6 +204,26 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
             for (int i=0; i<ngh; i++)
               Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,0);
     }
+#else
+	Kokkos::parallel_for("BR_XS",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (bc_in == periodicb) {
+			for (int n=0; n<nprim; n++){
+				Br.Xs(n,k,j,i) = Bs.Xs(n,k,j,i);   // from x-out send buffer
+			}
+		} else if (bc_in == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,ngh-1-i);
+			}
+			Br.Xs(nve1,k,j,i) = -Br.Xs(nve1,k,j,i);
+		} else if (bc_in == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,0);
+			}
+		}
+	});
+#endif
 
     // Br.Xe : ghost at x-out (right)
     if (bc_out == periodicb) {
@@ -712,7 +733,7 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	  //P.data[((n*ktot+ke+1  +k)*jtot+j)*itot+i] = Ze.data[((n*ngh+k)*jtot+j)*itot+i];
   }
 #else
-	Kokkos::parallel_for("PackZ",
+	Kokkos::parallel_for("UnpackZ",
 	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {itot, nprim, jtot, ngh}),
 	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
 		P.href(n,ks-ngh+k,j,i) = Br.Zs(n,k,j,i);
