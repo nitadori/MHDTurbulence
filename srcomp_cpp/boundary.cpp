@@ -585,6 +585,7 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
   // x-direction
   // |     |Bs.Xe   Bs.Xs|     |
   // |Br.Xs|             |Br.Xe|
+#if 0
 #pragma omp target teams distribute parallel for collapse(4)
   for (int n=0; n<nprim; n++)
     for (int k=0; k<ktot; k++)
@@ -595,6 +596,14 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	  //Bs.Xs_data[((n*ktot+k)*jtot+j)*ngh+i]=P.data[((n*ktot+k)*jtot+j)*itot+ie-ngh+1+i];
 	  //Bs.Xe_data[((n*ktot+k)*jtot+j)*ngh+i]=P.data[((n*ktot+k)*jtot+j)*itot+is      +i];
   }
+#else
+	Kokkos::parallel_for("PackX",
+	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {ngh, nprim, jtot, ktot}),
+	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
+		Bs.Xs(n,k,j,i) = P(n,k,j,ie-ngh+1+i);
+		Bs.Xe(n,k,j,i) = P(n,k,j,is      +i);
+	});
+#endif
   
   // y-direction
   // |     |Bs.Ye   Bs.Ys|     |
@@ -629,6 +638,7 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
   
   // |     |Bs.Xe   Bs.Xs|     |
   // |Br.Xs|             |Br.Xe|
+#if 0
 #pragma omp target teams distribute parallel for collapse(4)
   for (int n=0; n<nprim; n++)
     for (int k=0; k<ktot; k++)
@@ -639,6 +649,14 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	  //P.data[((n*ktot+k)*jtot+j)*itot+is-ngh+i] = Xs.data[((n*ktot+k)*jtot+j)*ngh+i];
 	  //P.data[((n*ktot+k)*jtot+j)*itot+ie+1  +i] = Xe.data[((n*ktot+k)*jtot+j)*ngh+i];
   }
+#else
+	Kokkos::parallel_for("UnpackX",
+	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {ngh, nprim, jtot, ktot}),
+	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
+		P.href(n,k,j,is-ngh+i) = Br.Xs(n,k,j,i);
+		P.href(n,k,j,ie+1  +i) = Br.Xe(n,k,j,i);
+	});
+#endif
 
   // |     |Bs.Ye   Bs.Ys|     |
   // |Br.Ys|             |Br.Ye|

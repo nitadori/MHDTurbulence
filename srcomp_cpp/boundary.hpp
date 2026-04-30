@@ -107,23 +107,33 @@ namespace boundary_mod {
 #endif
     }
 
+    // copy captureされても書き込めるようにconstは外した
     inline       T& Xs(int n, int k, int j, int i)       noexcept { return h_Xs(i, n, j, k); }
-    inline const T& Xs(int n, int k, int j, int i) const noexcept { return h_Xs(i, n, j, k); }
+    inline       T& Xs(int n, int k, int j, int i) const noexcept { return h_Xs(i, n, j, k); }
     inline       T& Xe(int n, int k, int j, int i)       noexcept { return h_Xe(i, n, j, k); }
-    inline const T& Xe(int n, int k, int j, int i) const noexcept { return h_Xe(i, n, j, k); }
+    inline       T& Xe(int n, int k, int j, int i) const noexcept { return h_Xe(i, n, j, k); }
     inline       T& Ys(int n, int k, int j, int i)       noexcept { return h_Ys(i, n, j, k); }
-    inline const T& Ys(int n, int k, int j, int i) const noexcept { return h_Ys(i, n, j, k); }
+    inline       T& Ys(int n, int k, int j, int i) const noexcept { return h_Ys(i, n, j, k); }
     inline       T& Ye(int n, int k, int j, int i)       noexcept { return h_Ye(i, n, j, k); }
-    inline const T& Ye(int n, int k, int j, int i) const noexcept { return h_Ye(i, n, j, k); }
+    inline       T& Ye(int n, int k, int j, int i) const noexcept { return h_Ye(i, n, j, k); }
     inline       T& Zs(int n, int k, int j, int i)       noexcept { return h_Zs(i, n, j, k); }
-    inline const T& Zs(int n, int k, int j, int i) const noexcept { return h_Zs(i, n, j, k); }
+    inline       T& Zs(int n, int k, int j, int i) const noexcept { return h_Zs(i, n, j, k); }
     inline       T& Ze(int n, int k, int j, int i)       noexcept { return h_Ze(i, n, j, k); }
-    inline const T& Ze(int n, int k, int j, int i) const noexcept { return h_Ze(i, n, j, k); }
+    inline       T& Ze(int n, int k, int j, int i) const noexcept { return h_Ze(i, n, j, k); }
 #endif
 
     void deallocate(){
 	    d_Xs = d_Xe = d_Ys = d_Ye = d_Zs = d_Ze = DView();
 	    h_Xs = h_Xe = h_Ys = h_Ye = h_Zs = h_Ze = HView();
+    }
+
+    void d2h_X(){
+	    Kokkos::deep_copy(h_Xs, d_Xs);
+	    Kokkos::deep_copy(h_Xe, d_Xe);
+    }
+    void h2d_X(){
+	    Kokkos::deep_copy(d_Xs, h_Xs);
+	    Kokkos::deep_copy(d_Xe, h_Xe);
     }
   };
 
