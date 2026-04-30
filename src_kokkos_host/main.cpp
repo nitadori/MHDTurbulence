@@ -62,12 +62,6 @@ static void GenerateGrid(hydflux_mod::GridArray<double>& G) {
   for(int k=ks-ngh;k<= ke+ngh;k++){
     G.x3b(k) = 0.5e0*(G.x3a(k+1)+G.x3a(k));
   }
-
-#pragma omp target update to ( G.x1a_data[0:G.n1],G.x1b_data[0:G.n1])
-#pragma omp target update to ( G.x2a_data[0:G.n2],G.x2b_data[0:G.n2])
-#pragma omp target update to ( G.x3a_data[0:G.n3],G.x3b_data[0:G.n3])
-
-  
 }
 static void GenerateProblem(hydflux_mod::GridArray<double>& G,hydflux_mod::FieldArray<double>& P,hydflux_mod::FieldArray<double>& U) {
   // Kelvin-Helmholtz initial condition
@@ -94,7 +88,6 @@ static void GenerateProblem(hydflux_mod::GridArray<double>& G,hydflux_mod::Field
   //#pragma omp target update to (csiso)
   
   chg   = 0.0;
-#pragma omp target update to (chg)
 
   // Base profile (fill including ghost cells to avoid uninitialized values)
   for (int k = ks-ngh; k <= ke+ngh; ++k)
@@ -188,9 +181,6 @@ static void GenerateProblem(hydflux_mod::GridArray<double>& G,hydflux_mod::Field
           U(mst+n,k,j,i) = rho * P(nst+n,k,j,i);
         }
       }
-
-#pragma omp target update to (U.data[0: U.size])
-#pragma omp target update to (P.data[0: P.size])
 }
 
 
@@ -207,7 +197,7 @@ int main(int argc, char **argv) {
   InitializeMPI();
   Kokkos::initialize(argc, argv);
 
-#if  1
+#ifdef _OPENMP
   int nth = -1;
 #pragma omp parallel
   nth = omp_get_num_threads();
@@ -237,6 +227,7 @@ int main(int argc, char **argv) {
 
   for (step=0;step<stepmax;step++){
     ControlTimestep(G); 
+
     // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
     if (myid_w==0 && step%10 ==0) printf("step=%i/%i time=%e dt=%e, %f%%\n",step,stepmax,time_sim,dt, time_sim/time_max*100.0);
     if(fpdt && step<100){

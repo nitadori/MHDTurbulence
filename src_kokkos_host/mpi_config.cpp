@@ -77,7 +77,7 @@ void InitializeMPI() {
 
   printf("init myid_w,gpuid=(%i,%i)\n",myid_w,gpuid);  
     // If device-side use of myid_w is needed later, this updates it once.
-#pragma acc update device(myid_w)
+// #pragma acc update device(myid_w)
 }
 
 void MPIminfind(const double& vin,const int& locin, double& vout, int& locout){
