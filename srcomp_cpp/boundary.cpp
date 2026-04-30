@@ -206,7 +206,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     }
 #else
 	Kokkos::parallel_for("BR_XS",
-	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {ngh, jtot, ktot}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_in == periodicb) {
 			for (int n=0; n<nprim; n++){
@@ -577,6 +577,7 @@ if (n2m != MPI_PROC_NULL) {
     const int bc_in  = boundary_zin;
     const int bc_out = boundary_zout;
 
+#if 0
     if (bc_in == periodicb) {
 #pragma omp target teams distribute parallel for collapse(4)
       for (int n=0; n<nprim; n++)
@@ -604,7 +605,28 @@ if (n2m != MPI_PROC_NULL) {
             for (int i=0; i<itot; i++)
               Br.Zs(n,k,j,i) = Bs.Ze(n,0,j,i);
     }
+#else
+	Kokkos::parallel_for("BR_ZS",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, jtot, ngh}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (bc_in == periodicb) {
+			for (int n=0; n<nprim; n++){
+				Br.Zs(n,k,j,i) = Bs.Zs(n,k,j,i);
+			}
+		} else if (bc_in == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Zs(n,k,j,i) = Bs.Ze(n,ngh-1-k,j,i);
+			}
+			Br.Zs(nve3,k,j,i) = -Br.Zs(nve3,k,j,i);
+		} else if (bc_in == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Zs(n,k,j,i) = Bs.Ze(n,0,j,i);
+			}
+		}
+	});
+#endif
 
+#if 0
     if (bc_out == periodicb) {
 #pragma omp target teams distribute parallel for collapse(4)
       for (int n=0; n<nprim; n++)
@@ -632,6 +654,26 @@ if (n2m != MPI_PROC_NULL) {
             for (int i=0; i<itot; i++)
               Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1,j,i);
     }
+#else
+	Kokkos::parallel_for("BR_ZE",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, jtot, ngh}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (bc_out== periodicb) {
+			for (int n=0; n<nprim; n++){
+				Br.Ze(n,k,j,i) = Bs.Ze(n,k,j,i);
+			}
+		} else if (bc_out== reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1-k,j,i);
+			}
+			Br.Ze(nve3,k,j,i) = -Br.Ze(nve3,k,j,i);
+		} else if (bc_out== outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1,j,i);
+			}
+		}
+	});
+#endif
   } else {
     // Ensure host copies of send buffers are up-to-date (Bs is produced on device)
 #pragma omp target update from(Bs.Zs_data[0:Bs.size3], Bs.Ze_data[0:Bs.size3])
