@@ -687,6 +687,7 @@ if (n3m != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Zs, Br.size3, MPI_DOUBLE, n3m, 3100, comm3d, &req[nreq++]);
       rc = MPI_Isend(h_Bs_Ze, Bs.size3, MPI_DOUBLE, n3m, 3200, comm3d, &req[nreq++]);
     } else {
+#if 0
       if (boundary_zin == reflection) {
 #pragma omp target teams distribute parallel for collapse(4)
         for (int n=0; n<nprim; n++)
@@ -707,12 +708,29 @@ if (n3m != MPI_PROC_NULL) {
               for (int i=0; i<itot; i++)
                 Br.Zs(n,k,j,i) = Bs.Ze(n,0,j,i);
       }
+#else
+	Kokkos::parallel_for("BR_ZS2",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, jtot, ngh}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (boundary_zin == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Zs(n,k,j,i) = Bs.Ze(n,ngh-1-k,j,i);
+			}
+			Br.Zs(nve3,k,j,i) = -Br.Zs(nve3,k,j,i);
+		} else if (boundary_zin == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Zs(n,k,j,i) = Bs.Ze(n,0,j,i);
+			}
+		}
+	});
+#endif
     }
 
     if (n3p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ze, Br.size3, MPI_DOUBLE, n3p, 3200, comm3d, &req[nreq++]);
       rc = MPI_Isend(h_Bs_Zs, Bs.size3, MPI_DOUBLE, n3p, 3100, comm3d, &req[nreq++]);
     } else {
+#if 0
       if (boundary_zout == reflection) {
 #pragma omp target teams distribute parallel for collapse(4)
         for (int n=0; n<nprim; n++)
@@ -733,6 +751,22 @@ if (n3m != MPI_PROC_NULL) {
               for (int i=0; i<itot; i++)
                 Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1,j,i);
       }
+#else
+	Kokkos::parallel_for("BR_ZE2",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {itot, jtot, ngh}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (boundary_zout== reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1-k,j,i);
+			}
+			Br.Ze(nve3,k,j,i) = -Br.Ze(nve3,k,j,i);
+		} else if (boundary_zout== outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1,j,i);
+			}
+		}
+	});
+#endif
     }
   }
 
