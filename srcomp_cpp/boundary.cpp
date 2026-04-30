@@ -226,6 +226,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 #endif
 
     // Br.Xe : ghost at x-out (right)
+#if 0
     if (bc_out == periodicb) {
 #pragma omp target teams distribute parallel for collapse(4)
       for (int n=0; n<nprim; n++)
@@ -254,6 +255,26 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
             for (int i=0; i<ngh; i++)
               Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1);
     }
+#else
+	Kokkos::parallel_for("BR_XE",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (bc_out== periodicb) {
+			for (int n=0; n<nprim; n++){
+				Br.Xe(n,k,j,i) = Bs.Xe(n,k,j,i);   // from x-in send buffer
+			}
+		} else if (bc_out== reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1-i);
+			}
+			Br.Xe(nve1,k,j,i) = -Br.Xe(nve1,k,j,i);
+		} else if (bc_out== outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1);
+			}
+		}
+	});
+#endif
   } else {
     // MPI exchange where neighbors exist; apply reflection/outflow when neighbor is MPI_PROC_NULL
     // Ensure host copies of send buffers are up-to-date (Bs is produced on device)
@@ -264,11 +285,12 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     double* h_Bs_Xs = Bs.Xs_data;
     double* h_Br_Xs = Br.Xs_data;
     double* h_Br_Xe = Br.Xe_data;
-if (n1m != MPI_PROC_NULL) {
+    if (n1m != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Xs, Br.size1, MPI_DOUBLE, n1m, 1100, comm3d, &req[nreq++]);
       rc = MPI_Isend(h_Bs_Xe, Bs.size1, MPI_DOUBLE, n1m, 1200, comm3d, &req[nreq++]);
     } else {
       // x-in physical boundary
+#if 0
       if (boundary_xin == reflection) {
 #pragma omp target teams distribute parallel for collapse(4)
         for (int n=0; n<nprim; n++)
@@ -289,6 +311,22 @@ if (n1m != MPI_PROC_NULL) {
               for (int i=0; i<ngh; i++)
                 Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,0);
       }
+#else
+	Kokkos::parallel_for("BR_XS",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (boundary_xin == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,ngh-1-i);
+			}
+			Br.Xs(nve1,k,j,i) = -Br.Xs(nve1,k,j,i);
+		} else if (boundary_xin == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,0);
+			}
+		}
+	});
+#endif
     }
 
     if (n1p != MPI_PROC_NULL) {
@@ -296,6 +334,7 @@ if (n1m != MPI_PROC_NULL) {
       rc = MPI_Isend(h_Bs_Xs, Bs.size1, MPI_DOUBLE, n1p, 1100, comm3d, &req[nreq++]);
     } else {
       // x-out physical boundary
+#if 0
       if (boundary_xout == reflection) {
 #pragma omp target teams distribute parallel for collapse(4)
         for (int n=0; n<nprim; n++)
@@ -316,6 +355,22 @@ if (n1m != MPI_PROC_NULL) {
               for (int i=0; i<ngh; i++)
                 Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1);
       }
+#else
+	Kokkos::parallel_for("BR_XE",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ngh, jtot, ktot}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+		if (boundary_xout == reflection) {
+			for (int n=0; n<nprim; n++){
+				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1-i);
+			}
+			Br.Xe(nve1,k,j,i) = -Br.Xe(nve1,k,j,i);
+		} else if (boundary_xout == outflow) {
+			for (int n=0; n<nprim; n++){
+				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1);
+			}
+		}
+	});
+#endif
     }
   }
 
