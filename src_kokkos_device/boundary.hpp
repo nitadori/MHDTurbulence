@@ -69,7 +69,7 @@ namespace boundary_mod {
     inline const T& Ze(int n, int k, int j, int i) const noexcept { return Ze_data[((n*ng + k)*n2 + j)*n1 + i]; }
 #else
     using DView = Kokkos::View<T****, Kokkos::LayoutLeft>;
-    using HView = typename DView::HostMirror;
+    using HView = typename DView::host_mirror_type;
     DView d_Xs, d_Xe, d_Ys, d_Ye, d_Zs, d_Ze;
     HView h_Xs, h_Xe, h_Ys, h_Ye, h_Zs, h_Ze;
 

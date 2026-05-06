@@ -230,17 +230,18 @@ int main(int argc, char **argv) {
 
     // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
     if (myid_w==0 && step%10 ==0) printf("step=%i/%i time=%e dt=%e, %f%%\n",step,stepmax,time_sim,dt, time_sim/time_max*100.0);
+    //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
+
+    SetBoundaryCondition(P,Bs,Br);
+    EvaluateCh();
+
     if(fpdt && step<100){
-	    fprintf(fpdt, "step=%d, time=%e, dt=%e\n", step, time_sim, dt);
+	    fprintf(fpdt, "step=%d, time=%e, dt=%e, chg=%e\n", step, time_sim, dt, chg);
     }
     if(fpdt && step>=100){
 	    fclose(fpdt);
 	    fpdt = nullptr;
     }
-    //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
-
-    SetBoundaryCondition(P,Bs,Br);
-    EvaluateCh();
 
 #if 0
     GetNumericalFlux1(G,P,Fx);

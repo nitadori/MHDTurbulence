@@ -66,7 +66,7 @@ namespace hydflux_mod {
     inline const T& x3b(int k) const noexcept { return x3b_data[k]; }
 #else
     using DView = Kokkos::View<T**, Kokkos::LayoutLeft>;
-    using HView = typename DView::HostMirror;
+    using HView = typename DView::host_mirror_type;
 
     DView d1, d2, d3;
     HView h1, h2, h3;
@@ -147,7 +147,7 @@ namespace hydflux_mod {
 #else
 // #warning USE KOKKOS VIEW
     using DView = Kokkos::View<T****, Kokkos::LayoutLeft>;
-    using HView = typename DView::HostMirror;
+    using HView = typename DView::host_mirror_type;
 
     DView d_view;
     HView h_view;
