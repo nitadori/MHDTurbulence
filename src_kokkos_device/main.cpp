@@ -14,6 +14,7 @@
 #include <random>
 
 #include <Kokkos_Core.hpp>
+#include <omp.h>
 
 #include "config.hpp"
 #include "mpi_config.hpp"

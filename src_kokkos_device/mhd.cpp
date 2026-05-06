@@ -86,6 +86,7 @@ void DeallocateHydroVariables(GridArray<double>& G,FieldArray<double>& U,FieldAr
 
 }
 
+KOKKOS_FUNCTION
 void vanLeer(const double& dsvp,const double& dsvm,double& dsv){
     if(dsvp * dsvm > 0.0e0){
       dsv = 2.0e0*dsvp *dsvm/(dsvp + dsvm);
@@ -94,6 +95,7 @@ void vanLeer(const double& dsvp,const double& dsvm,double& dsv){
     }
 }
 
+KOKKOS_FUNCTION
 void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+madd],double (&nflux)[mconsv]){
 
 //=====================================================================
@@ -990,11 +992,12 @@ void GetNumericalFluxD(
 		const FieldArray<double>& P,
 		FieldArray<double> &F)
 {
-	auto Norm2 = [](const auto &x, const auto &y, const auto &z){
+	auto chg = hydflux_mod::chg;
+	auto Norm2 = KOKKOS_LAMBDA(const double &x, const double &y, const double &z){
 		return x*x + y*y + z*z;
 	};
 
-	auto Prim2ConsD = [Norm2] (
+	auto Prim2ConsD = KOKKOS_LAMBDA (
 			const double (&Prim)[nprim], 
 			double (&Cons)[2*mconsv+madd],
 			const int muv1,
@@ -1075,7 +1078,7 @@ void GetNumericalFluxD(
 		Cons[mpre] = ptl;
 	};
 
-	auto Prim2Cons1 = [Prim2ConsD, Norm2] (
+	auto Prim2Cons1 = KOKKOS_LAMBDA (
 			const double (&Prim)[nprim], 
 			double (&Cons)[2*mconsv+madd])
 	{
@@ -1089,7 +1092,7 @@ void GetNumericalFluxD(
 				nve3, nbm3);
 	};
 
-	auto Prim2Cons2 = [Prim2ConsD] (
+	auto Prim2Cons2 = KOKKOS_LAMBDA (
 			const double (&Prim)[nprim], 
 			double (&Cons)[2*mconsv+madd])
 	{
@@ -1103,7 +1106,7 @@ void GetNumericalFluxD(
 				nve1, nbm1);
 	};
 
-	auto Prim2Cons3 = [Prim2ConsD] (
+	auto Prim2Cons3 = KOKKOS_LAMBDA (
 			const double (&Prim)[nprim], 
 			double (&Cons)[2*mconsv+madd])
 	{
@@ -1117,7 +1120,7 @@ void GetNumericalFluxD(
 				nve2, nbm2);
 	};
 
-	auto CalcFlux = [](
+	auto CalcFlux = KOKKOS_LAMBDA (
 			const double  (&Pleftc1)[nprim], 
 			const double  (&Pleftc2)[nprim], 
 			const double  (&Prigtc1)[nprim], 
@@ -1125,7 +1128,7 @@ void GetNumericalFluxD(
 			double (&numflux)[mconsv], 
 			double (&Clefte)[2*mconsv+madd], 
 			double (&Crigte)[2*mconsv+madd],
-			auto Prim2Cons)
+			const int idir)
 	{
 		// Calculte Left state
 		double Plefte [nprim];
@@ -1138,7 +1141,9 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
 		}
-		Prim2Cons(Plefte, Clefte);
+		if(1 == idir )Prim2Cons1(Plefte, Clefte);
+		if(2 == idir )Prim2Cons2(Plefte, Clefte);
+		if(3 == idir )Prim2Cons1(Plefte, Clefte);
 
 		// Calculte Right state
 
@@ -1152,7 +1157,9 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
 		}
-		Prim2Cons(Prigte, Crigte);
+		if(1 == idir )Prim2Cons1(Plefte, Clefte);
+		if(2 == idir )Prim2Cons2(Plefte, Clefte);
+		if(3 == idir )Prim2Cons1(Plefte, Clefte);
 
 		HLLD(Clefte, Crigte, numflux);
 	};
@@ -1220,7 +1227,7 @@ void GetNumericalFluxD(
 			Prigtc1[n] = P(n,k,j,i  );
 			Prigtc2[n] = P(n,k,j,i+1);
 			}
-			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons1);
+			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, 1);
 
 			F.href(mden,k,j,i) = numflux[mden];
 			F.href(mrv1,k,j,i) = numflux[mrvu];
@@ -1301,7 +1308,7 @@ void GetNumericalFluxD(
 			double numflux [mconsv];
 			double Clefte [2*mconsv+madd];
 			double Crigte [2*mconsv+madd];
-			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons2);
+			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, 2);
 
 			F.href(mden,k,j,i) = numflux[mden];
 			F.href(mrv1,k,j,i) = numflux[mrvw];
@@ -1386,7 +1393,7 @@ void GetNumericalFluxD(
 				Prigtc1[n] = P(n,k  ,j,i);
 				Prigtc2[n] = P(n,k+1,j,i);
 			}
-			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, Prim2Cons3);
+			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, 3);
 
 			F.href(mden,k,j,i) = numflux[mden];
 			F.href(mrv1,k,j,i) = numflux[mrvv];
@@ -1410,6 +1417,7 @@ void GetNumericalFluxD(
 }
 
 void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,const FieldArray<double>& Fy,const FieldArray<double>& Fz,FieldArray<double>& U){
+	auto dt = resolution_mod::dt;
 
   //printf("pre  U:%e %e %e %e\n", U(mden,ks,js,is), U(mrv3,ks,js,is), U(mbm3,ks,js,is), U(meto,ks,js,is));
   //printf("pre Fx:%e %e %e %e\n",Fx(mden,ks,js,is),Fx(mrv3,ks,js,is),Fx(mbm3,ks,js,is),Fx(meto,ks,js,is));
@@ -1445,6 +1453,7 @@ void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,cons
 
 
 void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P){
+	auto gam = hydflux_mod::gam;
 
   //printf("U:et b1 b2 b3=%e %e %e %e\n",U(meto,ks,js,is),U(mbm1,ks,js,is),U(mbm2,ks,js,is),U(mbm3,ks,js,is));
 #if 0
@@ -1534,8 +1543,9 @@ void ControlTimestep(const GridArray<double>& G){
 	
       }
 #else
-  	auto Sqr = [](auto x) { return x*x; };
-  	auto Norm2 = [](auto x, auto y, auto z) { return x*x + y*y + z*z; };
+  	auto Sqr = KOKKOS_LAMBDA(double x) { return x*x; };
+  	auto Norm2 = KOKKOS_LAMBDA(double x, double y, double z) { return x*x + y*y + z*z; };
+	auto P = hydflux_mod::P;
 	Kokkos::parallel_reduce("ControlTimestep",
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k, double& dtminloc) {
@@ -1562,6 +1572,7 @@ void ControlTimestep(const GridArray<double>& G){
 
 void EvaluateCh(){
   using namespace mpi_config_mod;
+  auto P = hydflux_mod::P;
   double chgloc = 0.0e0;
 // #pragma omp target teams distribute parallel for collapse(3) reduction(max:chgloc)
 #if 0
@@ -1612,6 +1623,8 @@ void EvaluateCh(){
 
 void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
   const double alphabp = 0.1e0;
+  auto chg = hydflux_mod::chg;
+  auto dt = resolution_mod::dt;
 #if 0
 // #pragma omp target teams distribute parallel for collapse(3)
   for (int k=ks; k<=ke; k++)

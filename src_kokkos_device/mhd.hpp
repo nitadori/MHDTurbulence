@@ -180,6 +180,7 @@ namespace hydflux_mod {
 	    data = nullptr;
     }
 
+    KOKKOS_INLINE_FUNCTION
     const T& operator()(int n, int k, int j, int i) const noexcept {
 #ifdef VIEW_LAYOUT_INJK
 	    return h_view(i, n, j, k);
@@ -189,6 +190,7 @@ namespace hydflux_mod {
 #endif
     }
 
+    KOKKOS_INLINE_FUNCTION
     T& operator()(int n, int k, int j, int i)  noexcept {
 #ifdef VIEW_LAYOUT_INJK
 	    return h_view(i, n, j, k);
@@ -198,6 +200,7 @@ namespace hydflux_mod {
 #endif
     }
 
+    KOKKOS_INLINE_FUNCTION
     const T& dev(int n, int k, int j, int i) const noexcept {
 #ifdef VIEW_LAYOUT_INJK
 	    return d_view(i, n, j, k);
@@ -207,6 +210,7 @@ namespace hydflux_mod {
 #endif
     }
 
+    KOKKOS_INLINE_FUNCTION
     T& dev(int n, int k, int j, int i)  noexcept {
 #ifdef VIEW_LAYOUT_INJK
 	    return d_view(i, n, j, k);
@@ -217,6 +221,7 @@ namespace hydflux_mod {
     }
 
     // copy captureでconstになったときでも書き込めるように
+    KOKKOS_INLINE_FUNCTION
     T& href(int n, int k, int j, int i) const noexcept {
 #ifdef VIEW_LAYOUT_INJK
 	    return h_view(i, n, j, k);
@@ -227,6 +232,7 @@ namespace hydflux_mod {
     }
 
     // 同上、デバイス版
+    KOKKOS_INLINE_FUNCTION
     T& dref(int n, int k, int j, int i) const noexcept {
 #ifdef VIEW_LAYOUT_INJK
 	    return d_view(i, n, j, k);

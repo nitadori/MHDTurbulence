@@ -107,6 +107,13 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
   using namespace mpi_config_mod;
   using namespace resolution_mod;
 
+  auto boundary_xin = boundary_mod::boundary_xin;
+  auto boundary_yin = boundary_mod::boundary_yin;
+  auto boundary_zin = boundary_mod::boundary_zin;
+  auto boundary_xout = boundary_mod::boundary_xout;
+  auto boundary_yout = boundary_mod::boundary_yout;
+  auto boundary_zout = boundary_mod::boundary_zout;
+
   const int dev = omp_get_default_device();
   int rc;
   int nreq = 0;

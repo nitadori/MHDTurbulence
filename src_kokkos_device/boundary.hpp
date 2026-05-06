@@ -108,18 +108,30 @@ namespace boundary_mod {
     }
 
     // copy captureされても書き込めるようにconstは外した
-    inline       T& Xs(int n, int k, int j, int i)       noexcept { return h_Xs(i, n, j, k); }
-    inline       T& Xs(int n, int k, int j, int i) const noexcept { return h_Xs(i, n, j, k); }
-    inline       T& Xe(int n, int k, int j, int i)       noexcept { return h_Xe(i, n, j, k); }
-    inline       T& Xe(int n, int k, int j, int i) const noexcept { return h_Xe(i, n, j, k); }
-    inline       T& Ys(int n, int k, int j, int i)       noexcept { return h_Ys(i, n, j, k); }
-    inline       T& Ys(int n, int k, int j, int i) const noexcept { return h_Ys(i, n, j, k); }
-    inline       T& Ye(int n, int k, int j, int i)       noexcept { return h_Ye(i, n, j, k); }
-    inline       T& Ye(int n, int k, int j, int i) const noexcept { return h_Ye(i, n, j, k); }
-    inline       T& Zs(int n, int k, int j, int i)       noexcept { return h_Zs(i, n, j, k); }
-    inline       T& Zs(int n, int k, int j, int i) const noexcept { return h_Zs(i, n, j, k); }
-    inline       T& Ze(int n, int k, int j, int i)       noexcept { return h_Ze(i, n, j, k); }
-    inline       T& Ze(int n, int k, int j, int i) const noexcept { return h_Ze(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Xs(int n, int k, int j, int i)       noexcept { return h_Xs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Xs(int n, int k, int j, int i) const noexcept { return h_Xs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Xe(int n, int k, int j, int i)       noexcept { return h_Xe(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Xe(int n, int k, int j, int i) const noexcept { return h_Xe(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Ys(int n, int k, int j, int i)       noexcept { return h_Ys(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Ys(int n, int k, int j, int i) const noexcept { return h_Ys(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Ye(int n, int k, int j, int i)       noexcept { return h_Ye(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Ye(int n, int k, int j, int i) const noexcept { return h_Ye(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Zs(int n, int k, int j, int i)       noexcept { return h_Zs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Zs(int n, int k, int j, int i) const noexcept { return h_Zs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Ze(int n, int k, int j, int i)       noexcept { return h_Ze(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& Ze(int n, int k, int j, int i) const noexcept { return h_Ze(i, n, j, k); }
 #endif
 
     void deallocate(){
