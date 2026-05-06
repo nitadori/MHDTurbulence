@@ -1143,7 +1143,7 @@ void GetNumericalFluxD(
 		}
 		if(1 == idir )Prim2Cons1(Plefte, Clefte);
 		if(2 == idir )Prim2Cons2(Plefte, Clefte);
-		if(3 == idir )Prim2Cons1(Plefte, Clefte);
+		if(3 == idir )Prim2Cons3(Plefte, Clefte);
 
 		// Calculte Right state
 
@@ -1157,9 +1157,9 @@ void GetNumericalFluxD(
 			vanLeer(dsvp,dsvm,dsv);
 			Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
 		}
-		if(1 == idir )Prim2Cons1(Plefte, Clefte);
-		if(2 == idir )Prim2Cons2(Plefte, Clefte);
-		if(3 == idir )Prim2Cons1(Plefte, Clefte);
+		if(1 == idir )Prim2Cons1(Prigte, Crigte);
+		if(2 == idir )Prim2Cons2(Prigte, Crigte);
+		if(3 == idir )Prim2Cons3(Prigte, Crigte);
 
 		HLLD(Clefte, Crigte, numflux);
 	};
