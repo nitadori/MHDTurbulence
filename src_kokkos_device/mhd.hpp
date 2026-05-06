@@ -95,11 +95,17 @@ namespace hydflux_mod {
     T& x3a(int k) noexcept { return h3(k, 0); }
     T& x3b(int k) noexcept { return h3(k, 1); }
 
+    KOKKOS_INLINE_FUNCTION
     const T& x1a(int i) const noexcept { return h1(i, 0); }
+    KOKKOS_INLINE_FUNCTION
     const T& x1b(int i) const noexcept { return h1(i, 1); }
+    KOKKOS_INLINE_FUNCTION
     const T& x2a(int j) const noexcept { return h2(j, 0); }
+    KOKKOS_INLINE_FUNCTION
     const T& x2b(int j) const noexcept { return h2(j, 1); }
+    KOKKOS_INLINE_FUNCTION
     const T& x3a(int k) const noexcept { return h3(k, 0); }
+    KOKKOS_INLINE_FUNCTION
     const T& x3b(int k) const noexcept { return h3(k, 1); }
 
     void h2d(){
