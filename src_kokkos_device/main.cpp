@@ -231,6 +231,7 @@ int main(int argc, char **argv) {
 
   for (step=0;step<stepmax;step++){
 
+    P.h2d();
     ControlTimestep(G); 
 
     // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
@@ -238,7 +239,7 @@ int main(int argc, char **argv) {
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
 
     SetBoundaryCondition(P,Bs,Br);
-    break;
+    P.d2h();
 
     EvaluateCh();
 
