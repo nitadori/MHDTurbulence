@@ -161,16 +161,16 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_in == periodicb) {
 			for (int n=0; n<nprim; n++){
-				Br.Xs(n,k,j,i) = Bs.Xs(n,k,j,i);   // from x-out send buffer
+				Br.dev_Xs(n,k,j,i) = Bs.dev_Xs(n,k,j,i);   // from x-out send buffer
 			}
 		} else if (bc_in == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,ngh-1-i);
+				Br.dev_Xs(n,k,j,i) = Bs.dev_Xe(n,k,j,ngh-1-i);
 			}
-			Br.Xs(nve1,k,j,i) = -Br.Xs(nve1,k,j,i);
+			Br.dev_Xs(nve1,k,j,i) = -Br.dev_Xs(nve1,k,j,i);
 		} else if (bc_in == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,0);
+				Br.dev_Xs(n,k,j,i) = Bs.dev_Xe(n,k,j,0);
 			}
 		}
 	});
@@ -212,16 +212,16 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_out== periodicb) {
 			for (int n=0; n<nprim; n++){
-				Br.Xe(n,k,j,i) = Bs.Xe(n,k,j,i);   // from x-in send buffer
+				Br.dev_Xe(n,k,j,i) = Bs.dev_Xe(n,k,j,i);   // from x-in send buffer
 			}
 		} else if (bc_out== reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1-i);
+				Br.dev_Xe(n,k,j,i) = Bs.dev_Xs(n,k,j,ngh-1-i);
 			}
-			Br.Xe(nve1,k,j,i) = -Br.Xe(nve1,k,j,i);
+			Br.dev_Xe(nve1,k,j,i) = -Br.dev_Xe(nve1,k,j,i);
 		} else if (bc_out== outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1);
+				Br.dev_Xe(n,k,j,i) = Bs.dev_Xs(n,k,j,ngh-1);
 			}
 		}
 	});
@@ -236,6 +236,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     double* h_Br_Xs = Br.Xs_data;
     double* h_Br_Xe = Br.Xe_data;
     if (n1m != MPI_PROC_NULL) {
+      Bs.d2h_Xe();
       rc = MPI_Irecv(h_Br_Xs, Br.size1, MPI_DOUBLE, n1m, 1100, comm3d, &req[nreq++]);
       rc = MPI_Isend(h_Bs_Xe, Bs.size1, MPI_DOUBLE, n1m, 1200, comm3d, &req[nreq++]);
     } else {
@@ -267,12 +268,12 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_xin == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,ngh-1-i);
+				Br.dev_Xs(n,k,j,i) = Bs.dev_Xe(n,k,j,ngh-1-i);
 			}
-			Br.Xs(nve1,k,j,i) = -Br.Xs(nve1,k,j,i);
+			Br.dev_Xs(nve1,k,j,i) = -Br.dev_Xs(nve1,k,j,i);
 		} else if (boundary_xin == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Xs(n,k,j,i) = Bs.Xe(n,k,j,0);
+				Br.dev_Xs(n,k,j,i) = Bs.dev_Xe(n,k,j,0);
 			}
 		}
 	});
@@ -281,6 +282,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 
     if (n1p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Xe, Br.size1, MPI_DOUBLE, n1p, 1200, comm3d, &req[nreq++]);
+      Bs.d2h_Xs();
       rc = MPI_Isend(h_Bs_Xs, Bs.size1, MPI_DOUBLE, n1p, 1100, comm3d, &req[nreq++]);
     } else {
       // x-out physical boundary
@@ -311,12 +313,12 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_xout == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1-i);
+				Br.dev_Xe(n,k,j,i) = Bs.dev_Xs(n,k,j,ngh-1-i);
 			}
-			Br.Xe(nve1,k,j,i) = -Br.Xe(nve1,k,j,i);
+			Br.dev_Xe(nve1,k,j,i) = -Br.dev_Xe(nve1,k,j,i);
 		} else if (boundary_xout == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Xe(n,k,j,i) = Bs.Xs(n,k,j,ngh-1);
+				Br.dev_Xe(n,k,j,i) = Bs.dev_Xs(n,k,j,ngh-1);
 			}
 		}
 	});

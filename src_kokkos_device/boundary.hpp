@@ -163,12 +163,12 @@ namespace boundary_mod {
 	    h_Xs = h_Xe = h_Ys = h_Ye = h_Zs = h_Ze = HView();
     }
 
-    void d2h_Xs(){ Kokkos::deep_copy(h_Xs, d_Xs); }
-    void d2h_Xe(){ Kokkos::deep_copy(h_Xe, d_Xe); }
-    void d2h_Ys(){ Kokkos::deep_copy(h_Ys, d_Ys); }
-    void d2h_Ye(){ Kokkos::deep_copy(h_Ye, d_Ye); }
-    void d2h_Zs(){ Kokkos::deep_copy(h_Zs, d_Zs); }
-    void d2h_Ze(){ Kokkos::deep_copy(h_Ze, d_Ze); }
+    void d2h_Xs() const { Kokkos::deep_copy(h_Xs, d_Xs); }
+    void d2h_Xe() const { Kokkos::deep_copy(h_Xe, d_Xe); }
+    void d2h_Ys() const { Kokkos::deep_copy(h_Ys, d_Ys); }
+    void d2h_Ye() const { Kokkos::deep_copy(h_Ye, d_Ye); }
+    void d2h_Zs() const { Kokkos::deep_copy(h_Zs, d_Zs); }
+    void d2h_Ze() const { Kokkos::deep_copy(h_Ze, d_Ze); }
 
     void h2d_Xs(){ Kokkos::deep_copy(d_Xs, h_Xs); }
     void h2d_Xe(){ Kokkos::deep_copy(d_Xe, h_Xe); }

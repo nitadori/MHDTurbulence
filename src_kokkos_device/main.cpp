@@ -237,9 +237,9 @@ int main(int argc, char **argv) {
     if (myid_w==0 && step%10 ==0) printf("step=%i/%i time=%e dt=%e, %f%%\n",step,stepmax,time_sim,dt, time_sim/time_max*100.0);
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
 
+    SetBoundaryCondition(P,Bs,Br);
     break;
 
-    SetBoundaryCondition(P,Bs,Br);
     EvaluateCh();
 
     if(fpdt && step<100){
