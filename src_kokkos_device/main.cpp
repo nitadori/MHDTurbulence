@@ -216,6 +216,9 @@ int main(int argc, char **argv) {
   
   GenerateGrid(G);
   GenerateProblem(G,P,U);
+  G.h2d();
+  P.h2d();
+  U.h2d();
   // Force output at the initial state (Fortran: call Output(forceoutput))
   Output(forceoutput);
 
@@ -227,11 +230,14 @@ int main(int argc, char **argv) {
   if(!myid_w) fpdt = fopen("dt.log", "w");
 
   for (step=0;step<stepmax;step++){
+
     ControlTimestep(G); 
 
     // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
     if (myid_w==0 && step%10 ==0) printf("step=%i/%i time=%e dt=%e, %f%%\n",step,stepmax,time_sim,dt, time_sim/time_max*100.0);
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
+
+    break;
 
     SetBoundaryCondition(P,Bs,Br);
     EvaluateCh();
@@ -267,6 +273,7 @@ int main(int argc, char **argv) {
     if(time_sim > time_max || step >= 150) break;
     
   }
+  P.d2h();
 
   //DeallocateHydroVariables(U,Fx,Fy,Fz,P);
   //DeallocateBoundaryVariables(Xs,Xe,Ys,Ye,Zs,Ze);

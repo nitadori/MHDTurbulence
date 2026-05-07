@@ -1553,8 +1553,8 @@ void ControlTimestep(const GridArray<double>& G){
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k, double& dtminloc) {
 	  double ctot = sqrt( 
-		      	  Sqr(P(ncsp,k,j,i))
-			  + Norm2(P(nbm1,k,j,i), P(nbm2,k,j,i), P(nbm3,k,j,i)) / P(nden,k,j,i)
+		      	  Sqr(P.dev(ncsp,k,j,i))
+			  + Norm2(P.dev(nbm1,k,j,i), P.dev(nbm2,k,j,i), P.dev(nbm3,k,j,i)) / P.dev(nden,k,j,i)
 			  ); 
 #if 0
 	  double dt= std::min({ 
@@ -1566,9 +1566,9 @@ void ControlTimestep(const GridArray<double>& G){
 #else
 	  dtminloc = Kokkos::fmin(
 			  Kokkos::fmin(dtminloc, 
-				       (G.x1a(i+1)-G.x1a(i))/(std::abs(P(nve1,k,j,i))+ctot)),
-			  Kokkos::fmin((G.x2a(j+1)-G.x2a(j))/(std::abs(P(nve2,k,j,i))+ctot),
-				       (G.x3a(k+1)-G.x3a(k))/(std::abs(P(nve3,k,j,i))+ctot))
+				       (G.dev_x1a(i+1)-G.dev_x1a(i))/(std::abs(P.dev(nve1,k,j,i))+ctot)),
+			  Kokkos::fmin((G.dev_x2a(j+1)-G.dev_x2a(j))/(std::abs(P.dev(nve2,k,j,i))+ctot),
+				       (G.dev_x3a(k+1)-G.dev_x3a(k))/(std::abs(P.dev(nve3,k,j,i))+ctot))
 			  );
 #endif
 	},
