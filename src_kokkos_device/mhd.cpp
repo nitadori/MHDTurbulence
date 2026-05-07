@@ -214,8 +214,8 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
         cfl = leftst[mcsp];
         cfr = rigtst[mcsp];
 
-        sl = std::min(vxl,vxr)-std::max(cfl,cfr); // note sl is negative
-        sr = std::max(vxl,vxr)+std::max(cfl,cfr);
+        sl = std::fmin(vxl,vxr)-std::fmax(cfl,cfr); // note sl is negative
+        sr = std::fmax(vxl,vxr)+std::fmax(cfl,cfr);
 //----- Step 2. ----------------------------------------------------------|
 // compute L/R fluxs
 //
@@ -247,8 +247,8 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
 //----- Step 4. ----------------------------------------------------------|
 // compute middle and alfven wave
 //
-        sdl = std::min(-1e-20,sl - vxl);
-        sdr = std::max( 1e-20,sr - vxr);
+        sdl = std::fmin(-1e-20,sl - vxl);
+        sdr = std::fmax( 1e-20,sr - vxr);
         rosdl = rol*sdl;
         rosdr = ror*sdr;
 
@@ -256,8 +256,8 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
 // Eq. 45
         sm = (rosdr*vxr - rosdl*vxl - ptr + ptl)*temp;
            
-        sdml = std::min(-1e-20,sl - sm); isdml = 1.0e0/sdml;
-        sdmr = std::max( 1e-20,sr - sm); isdmr = 1.0e0/sdmr;
+        sdml = std::fmin(-1e-20,sl - sm); isdml = 1.0e0/sdml;
+        sdmr = std::fmax( 1e-20,sr - sm); isdmr = 1.0e0/sdmr;
 
 //----- Step 5. ----------------------------------------------------------|
 // compute intermediate states
@@ -273,8 +273,8 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
            temp_fst = rosdl*sdml - bxsq;
            sign1 = std::copysign(1.0e0,std::abs(temp_fst)-eps);
 
-           maxs1 = std::max(0.0e0,sign1);
-           mins1 = std::min(0.0e0,sign1);
+           maxs1 = std::fmax(0.0e0,sign1);
+           mins1 = std::fmin(0.0e0,sign1);
 
            itf = 1.0e0/(temp_fst+mins1);
            isdml = 1.0e0/sdml;
@@ -306,8 +306,8 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
 //
            temp_fst = rosdr*sdmr - bxsq;
            sign1 = std::copysign(1.0e0,std::abs(temp_fst)-eps);
-           maxs1 = std::max(0.0e0,sign1);
-           mins1 = std::min(0.0e0,sign1);
+           maxs1 = std::fmax(0.0e0,sign1);
+           mins1 = std::fmin(0.0e0,sign1);
 
            itf = 1.0e0/(temp_fst+mins1);
            isdmr = 1.0e0/sdmr;
@@ -344,8 +344,8 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
            signbx = std::copysign(1.0e0,bxs);
            sign1  = std::copysign(1.0e0,abbx-eps);
 
-           maxs1 =  std::max(0e0,sign1);
-           mins1 = -std::min(0e0,sign1);
+           maxs1 =  std::fmax(0e0,sign1);
+           mins1 = -std::fmin(0e0,sign1);
            invsumro = maxs1/(sqrtrol + sqrtror);
 
            temp = invsumro*(sqrtrol*vylst + sqrtror*vyrst
@@ -353,6 +353,7 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
            vyldst = vylst*mins1 + temp;
            vyrdst = vyrst*mins1 + temp;
 	   (void)vyrdst;
+	   [[maybe_unused]] auto vyrdst_ = vyrdst;
            ryldst = rylst*mins1 + rolst * temp;
            ryrdst = ryrst*mins1 + rorst * temp;
 
@@ -361,6 +362,7 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
            vzldst = vzlst*mins1 + temp;
            vzrdst = vzrst*mins1 + temp;
 	   (void)vzrdst;
+	   [[maybe_unused]] auto vzrdst_ = vzrdst;
            rzldst = rzlst*mins1 + rolst * temp;
            rzrdst = rzrst*mins1 + rorst * temp;
 
@@ -384,17 +386,18 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
            srst = (sm + abbx/sqrtror)*maxs1;
 
            sign1 =  std::copysign(1.0e0,sm);
-           maxs1 =  std::max(0.0e0,sign1);
-           mins1 = -std::min(0.0e0,sign1);
+           maxs1 =  std::fmax(0.0e0,sign1);
+           mins1 = -std::fmin(0.0e0,sign1);
 
-           msl = std::min(sl,0.0e0);
-           msr = std::max(sr,0.0e0);
-           mslst = std::min(slst,0.0e0);
-           msrst = std::max(srst,0.0e0);
+           msl = std::fmin(sl,0.0e0);
+           msr = std::fmax(sr,0.0e0);
+           mslst = std::fmin(slst,0.0e0);
+           msrst = std::fmax(srst,0.0e0);
 
            temp = mslst-msl;
            temp1 = msrst-msr;
 	   (void)temp1;
+	   [[maybe_unused]] auto temp1_ = temp1;
 
            nflux[mden] = (frol+(rolst-rol)*msl)*maxs1
                         +(fror+(rorst-ror)*msr)*mins1;
@@ -1558,7 +1561,7 @@ void ControlTimestep(const GridArray<double>& G){
 			  (G.x2a(j+1)-G.x2a(j))/(std::abs(P(nve2,k,j,i))+ctot),
 			  (G.x3a(k+1)-G.x3a(k))/(std::abs(P(nve3,k,j,i))+ctot)
 		  });
-	  dtminloc = std::min(dtminloc, dt);
+	  dtminloc = std::fmin(dtminloc, dt);
 	},
 	Kokkos::Min<double>(dtminl)
 	);
