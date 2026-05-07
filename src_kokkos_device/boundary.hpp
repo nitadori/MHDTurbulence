@@ -157,7 +157,6 @@ namespace boundary_mod {
     T& dev_Ze(int n, int k, int j, int i)       noexcept { return d_Ze(i, n, j, k); }
     KOKKOS_INLINE_FUNCTION
     T& dev_Ze(int n, int k, int j, int i) const noexcept { return d_Ze(i, n, j, k); }
-#endif
 
     void deallocate(){
 	    d_Xs = d_Xe = d_Ys = d_Ye = d_Zs = d_Ze = DView();
@@ -166,9 +165,18 @@ namespace boundary_mod {
 
     void d2h_Xs(){ Kokkos::deep_copy(h_Xs, d_Xs); }
     void d2h_Xe(){ Kokkos::deep_copy(h_Xe, d_Xe); }
+    void d2h_Ys(){ Kokkos::deep_copy(h_Ys, d_Ys); }
+    void d2h_Ye(){ Kokkos::deep_copy(h_Ye, d_Ye); }
+    void d2h_Zs(){ Kokkos::deep_copy(h_Zs, d_Zs); }
+    void d2h_Ze(){ Kokkos::deep_copy(h_Ze, d_Ze); }
 
     void h2d_Xs(){ Kokkos::deep_copy(d_Xs, h_Xs); }
     void h2d_Xe(){ Kokkos::deep_copy(d_Xe, h_Xe); }
+    void h2d_Ys(){ Kokkos::deep_copy(d_Ys, h_Ys); }
+    void h2d_Ye(){ Kokkos::deep_copy(d_Ye, h_Ye); }
+    void h2d_Zs(){ Kokkos::deep_copy(d_Zs, h_Zs); }
+    void h2d_Ze(){ Kokkos::deep_copy(d_Ze, h_Ze); }
+#endif
   };
 
   extern BoundaryArray<double> Bs,Br; 

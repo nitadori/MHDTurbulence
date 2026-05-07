@@ -108,10 +108,29 @@ namespace hydflux_mod {
     KOKKOS_INLINE_FUNCTION
     const T& x3b(int k) const noexcept { return h3(k, 1); }
 
+    KOKKOS_INLINE_FUNCTION
+    const T& dev_x1a(int i) const noexcept { return d1(i, 0); }
+    KOKKOS_INLINE_FUNCTION
+    const T& dev_x1b(int i) const noexcept { return d1(i, 1); }
+    KOKKOS_INLINE_FUNCTION
+    const T& dev_x2a(int j) const noexcept { return d2(j, 0); }
+    KOKKOS_INLINE_FUNCTION
+    const T& dev_x2b(int j) const noexcept { return d2(j, 1); }
+    KOKKOS_INLINE_FUNCTION
+    const T& dev_x3a(int k) const noexcept { return d3(k, 0); }
+    KOKKOS_INLINE_FUNCTION
+    const T& dev_x3b(int k) const noexcept { return d3(k, 1); }
+
     void h2d(){
 	    Kokkos::deep_copy(d1, h1);
 	    Kokkos::deep_copy(d2, h2);
 	    Kokkos::deep_copy(d3, h3);
+#if 0 // may not be needed
+    void d2h(){
+	    Kokkos::deep_copy(h1, d1);
+	    Kokkos::deep_copy(h2, d2);
+	    Kokkos::deep_copy(h3, d3);
+#endif
     }
 #endif
 
