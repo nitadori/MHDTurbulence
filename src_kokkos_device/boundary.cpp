@@ -365,16 +365,16 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_in == periodicb) {
 			for (int n=0; n<nprim; n++){
-				Br.Ys(n,k,j,i) = Bs.Ys(n,k,j,i);
+				Br.dev_Ys(n,k,j,i) = Bs.dev_Ys(n,k,j,i);
 			}
 		} else if (bc_in == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Ys(n,k,j,i) = Bs.Ye(n,k,ngh-1-j,i);
+				Br.dev_Ys(n,k,j,i) = Bs.dev_Ye(n,k,ngh-1-j,i);
 			}
-			Br.Ys(nve2,k,j,i) = -Br.Ys(nve2,k,j,i);
+			Br.dev_Ys(nve2,k,j,i) = -Br.dev_Ys(nve2,k,j,i);
 		} else if (bc_in == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Ys(n,k,j,i) = Bs.Ye(n,k,0,i);
+				Br.dev_Ys(n,k,j,i) = Bs.dev_Ye(n,k,0,i);
 			}
 		}
 	});
@@ -414,16 +414,16 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_out == periodicb) {
 			for (int n=0; n<nprim; n++){
-				Br.Ye(n,k,j,i) = Bs.Ye(n,k,j,i);
+				Br.dev_Ye(n,k,j,i) = Bs.dev_Ye(n,k,j,i);
 			}
 		} else if (bc_out == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1-j,i);
+				Br.dev_Ye(n,k,j,i) = Bs.dev_Ys(n,k,ngh-1-j,i);
 			}
-			Br.Ye(nve2,k,j,i) = -Br.Ye(nve2,k,j,i);
+			Br.dev_Ye(nve2,k,j,i) = -Br.dev_Ye(nve2,k,j,i);
 		} else if (bc_out == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1,i);
+				Br.dev_Ye(n,k,j,i) = Bs.dev_Ys(n,k,ngh-1,i);
 			}
 		}
 	});
@@ -438,6 +438,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     double* h_Br_Ye = Br.Ye_data;
 if (n2m != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ys, Br.size2, MPI_DOUBLE, n2m, 2100, comm3d, &req[nreq++]);
+      Bs.d2h_Ye();
       rc = MPI_Isend(h_Bs_Ye, Bs.size2, MPI_DOUBLE, n2m, 2200, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -467,12 +468,12 @@ if (n2m != MPI_PROC_NULL) {
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_yin == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Ys(n,k,j,i) = Bs.Ye(n,k,ngh-1-j,i);
+				Br.dev_Ys(n,k,j,i) = Bs.dev_Ye(n,k,ngh-1-j,i);
 			}
-			Br.Ys(nve2,k,j,i) = -Br.Ys(nve2,k,j,i);
+			Br.dev_Ys(nve2,k,j,i) = -Br.dev_Ys(nve2,k,j,i);
 		} else if (boundary_yin == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Ys(n,k,j,i) = Bs.Ye(n,k,0,i);
+				Br.dev_Ys(n,k,j,i) = Bs.dev_Ye(n,k,0,i);
 			}
 		}
 	});
@@ -481,6 +482,7 @@ if (n2m != MPI_PROC_NULL) {
 
     if (n2p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ye, Br.size2, MPI_DOUBLE, n2p, 2200, comm3d, &req[nreq++]);
+      Bs.d2h_Ys();
       rc = MPI_Isend(h_Bs_Ys, Bs.size2, MPI_DOUBLE, n2p, 2100, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -510,12 +512,12 @@ if (n2m != MPI_PROC_NULL) {
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_yout == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1-j,i);
+				Br.dev_Ye(n,k,j,i) = Bs.dev_Ys(n,k,ngh-1-j,i);
 			}
-			Br.Ye(nve2,k,j,i) = -Br.Ye(nve2,k,j,i);
+			Br.dev_Ye(nve2,k,j,i) = -Br.dev_Ye(nve2,k,j,i);
 		} else if (boundary_yout == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Ye(n,k,j,i) = Bs.Ys(n,k,ngh-1,i);
+				Br.dev_Ye(n,k,j,i) = Bs.dev_Ys(n,k,ngh-1,i);
 			}
 		}
 	});
