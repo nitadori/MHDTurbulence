@@ -797,8 +797,8 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	Kokkos::parallel_for("PackX",
 	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {ngh, nprim, jtot, ktot}),
 	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
-		Bs.Xs(n,k,j,i) = P(n,k,j,ie-ngh+1+i);
-		Bs.Xe(n,k,j,i) = P(n,k,j,is      +i);
+		Bs.dev_Xs(n,k,j,i) = P.dev(n,k,j,ie-ngh+1+i);
+		Bs.dev_Xe(n,k,j,i) = P.dev(n,k,j,is      +i);
 	});
 #endif
   
@@ -820,8 +820,8 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	Kokkos::parallel_for("PackY",
 	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {itot, nprim, ngh, ktot}),
 	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
-		Bs.Ys(n,k,j,i) = P(n,k,je-ngh+1+j,i);
-		Bs.Ye(n,k,j,i) = P(n,k,js      +j,i);
+		Bs.dev_Ys(n,k,j,i) = P.dev(n,k,je-ngh+1+j,i);
+		Bs.dev_Ye(n,k,j,i) = P.dev(n,k,js      +j,i);
 	});
 #endif
   
@@ -843,8 +843,8 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	Kokkos::parallel_for("PackZ",
 	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {itot, nprim, jtot, ngh}),
 	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
-		Bs.Zs(n,k,j,i) = P(n,ke-ngh+1+k,j,i);
-		Bs.Ze(n,k,j,i) = P(n,ks      +k,j,i);
+		Bs.dev_Zs(n,k,j,i) = P.dev(n,ke-ngh+1+k,j,i);
+		Bs.dev_Ze(n,k,j,i) = P.dev(n,ks      +k,j,i);
 	});
 #endif
 
@@ -868,8 +868,8 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	Kokkos::parallel_for("UnpackX",
 	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {ngh, nprim, jtot, ktot}),
 	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
-		P.href(n,k,j,is-ngh+i) = Br.Xs(n,k,j,i);
-		P.href(n,k,j,ie+1  +i) = Br.Xe(n,k,j,i);
+		P.dref(n,k,j,is-ngh+i) = Br.dev_Xs(n,k,j,i);
+		P.dref(n,k,j,ie+1  +i) = Br.dev_Xe(n,k,j,i);
 	});
 #endif
 
@@ -890,8 +890,8 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	Kokkos::parallel_for("UnpackY",
 	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {itot, nprim, ngh, ktot}),
 	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
-		P.href(n,k,js-ngh+j,i) = Br.Ys(n,k,j,i);
-		P.href(n,k,je+1  +j,i) = Br.Ye(n,k,j,i);
+		P.dref(n,k,js-ngh+j,i) = Br.dev_Ys(n,k,j,i);
+		P.dref(n,k,je+1  +j,i) = Br.dev_Ye(n,k,j,i);
 	});
 #endif
 
@@ -912,8 +912,8 @@ void SetBoundaryCondition(FieldArray<double>& P,BoundaryArray<double>& Bs,Bounda
 	Kokkos::parallel_for("UnpackZ",
 	Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {itot, nprim, jtot, ngh}),
 	KOKKOS_LAMBDA(const int i, const int n, const int j, const int k) {
-		P.href(n,ks-ngh+k,j,i) = Br.Zs(n,k,j,i);
-		P.href(n,ke+1  +k,j,i) = Br.Ze(n,k,j,i);
+		P.dref(n,ks-ngh+k,j,i) = Br.dev_Zs(n,k,j,i);
+		P.dref(n,ke+1  +k,j,i) = Br.dev_Ze(n,k,j,i);
 	});
 #endif
 };
