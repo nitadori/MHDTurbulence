@@ -115,7 +115,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
   auto boundary_zout = boundary_mod::boundary_zout;
 
   const int dev = omp_get_default_device();
-  int rc;
+  [[maybe_unused]] int rc;
   int nreq = 0;
 
   (void)dev, (void)rc;

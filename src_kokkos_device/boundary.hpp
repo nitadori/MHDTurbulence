@@ -132,6 +132,31 @@ namespace boundary_mod {
     T& Ze(int n, int k, int j, int i)       noexcept { return h_Ze(i, n, j, k); }
     KOKKOS_INLINE_FUNCTION
     T& Ze(int n, int k, int j, int i) const noexcept { return h_Ze(i, n, j, k); }
+
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Xs(int n, int k, int j, int i)       noexcept { return d_Xs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Xs(int n, int k, int j, int i) const noexcept { return d_Xs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Xe(int n, int k, int j, int i)       noexcept { return d_Xe(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Xe(int n, int k, int j, int i) const noexcept { return d_Xe(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Ys(int n, int k, int j, int i)       noexcept { return d_Ys(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Ys(int n, int k, int j, int i) const noexcept { return d_Ys(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Ye(int n, int k, int j, int i)       noexcept { return d_Ye(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Ye(int n, int k, int j, int i) const noexcept { return d_Ye(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Zs(int n, int k, int j, int i)       noexcept { return d_Zs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Zs(int n, int k, int j, int i) const noexcept { return d_Zs(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Ze(int n, int k, int j, int i)       noexcept { return d_Ze(i, n, j, k); }
+    KOKKOS_INLINE_FUNCTION
+    T& dev_Ze(int n, int k, int j, int i) const noexcept { return d_Ze(i, n, j, k); }
 #endif
 
     void deallocate(){
