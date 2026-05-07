@@ -239,9 +239,10 @@ int main(int argc, char **argv) {
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
 
     SetBoundaryCondition(P,Bs,Br);
-    P.d2h();
 
     EvaluateCh();
+    P.d2h();
+    break;
 
     if(fpdt && step<100){
 	    fprintf(fpdt, "step=%d, time=%e, dt=%e, chg=%e\n", step, time_sim, dt, chg);

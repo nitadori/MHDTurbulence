@@ -1606,20 +1606,20 @@ void EvaluateCh(){
         chgloc = std::max({chgloc,ch1,ch2,ch3});
       }
 #else
-	Kokkos::parallel_reduce("ControlTimestep",
+	Kokkos::parallel_reduce("EvaluateCh",
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k, double& chgll) {
-		double css = P(ncsp,k,j,i)*P(ncsp,k,j,i);
-		double ca1 = P(nbm1,k,j,i)*P(nbm1,k,j,i) / P(nden,k,j,i);
-		double ca2 = P(nbm2,k,j,i)*P(nbm2,k,j,i) / P(nden,k,j,i);
-		double ca3 = P(nbm3,k,j,i)*P(nbm3,k,j,i) / P(nden,k,j,i);
+		double css = P.dev(ncsp,k,j,i)*P.dev(ncsp,k,j,i);
+		double ca1 = P.dev(nbm1,k,j,i)*P.dev(nbm1,k,j,i) / P.dev(nden,k,j,i);
+		double ca2 = P.dev(nbm2,k,j,i)*P.dev(nbm2,k,j,i) / P.dev(nden,k,j,i);
+		double ca3 = P.dev(nbm3,k,j,i)*P.dev(nbm3,k,j,i) / P.dev(nden,k,j,i);
 		double cts = css + ca1 + ca2 + ca3;
 		double cm1 = sqrt((cts+sqrt(cts*cts-4.0e0*css*ca1))/2.0e0);
-		double ch1 = (std::abs(P(nve1,k,j,i))+cm1);
+		double ch1 = (std::abs(P.dev(nve1,k,j,i))+cm1);
 		double cm2 = sqrt((cts+sqrt(cts*cts-4.0e0*css*ca2))/2.0e0);
-		double ch2 = (std::abs(P(nve2,k,j,i))+cm2);
+		double ch2 = (std::abs(P.dev(nve2,k,j,i))+cm2);
 		double cm3 = sqrt((cts+sqrt(cts*cts-4.0e0*css*ca3))/2.0e0);
-		double ch3 = (std::abs(P(nve3,k,j,i))+cm3);
+		double ch3 = (std::abs(P.dev(nve3,k,j,i))+cm3);
 
 #if 0
 		chgll = std::max({chgll,ch1,ch2,ch3});
