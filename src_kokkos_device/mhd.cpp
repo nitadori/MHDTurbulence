@@ -421,574 +421,6 @@ void HLLD(const double (&leftst)[2*mconsv+madd],const double (&rigtst)[2*mconsv+
 
 }
 
-void GetNumericalFlux1(const GridArray<double>&G,const FieldArray<double>& P,FieldArray<double>& Fx){
-
-#pragma omp target teams distribute parallel for collapse(3)
-    for (int k=ks; k<=ke; k++)
-      for (int j=js; j<=je; j++){
-	for (int i=is; i<=ie+1; i++) {
-	  // Pick up related cell
-	  double Pleftc1[nprim];
-	  double Pleftc2[nprim];
-	  double Prigtc1[nprim];
-	  double Prigtc2[nprim];  
-	  for (int n=0; n<nprim; n++){
-	    Pleftc1[n] = P(n,k,j,i-2);
-	    Pleftc2[n] = P(n,k,j,i-1);
-	    Prigtc1[n] = P(n,k,j,i  );
-	    Prigtc2[n] = P(n,k,j,i+1);
-	  }
-	  //if(i==is) printf("Pleftc1: %e %e %e %e\n",Pleftc1[mden],Pleftc1[mrvu],Pleftc1[meto],Pleftc1[mubp]);
-	  // Calculte Left state
-	  double Plefte [nprim];
-	  double dsvp,dsvm,dsv;
-	  /* | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |  */
-	  /*                     You are here                   */
-	  for (int n=0; n<nprim; n++){
-	    dsvp =  Prigtc1[n]- Pleftc2[n];
-	    dsvm =              Pleftc2[n]- Pleftc1[n];
-	    vanLeer(dsvp,dsvm,dsv);
-	    Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
-	  }
-
-	  //if(i==is)printf("Plefte: %e %e %e %e\n",Plefte[mden],Plefte[mrvu],Plefte[meto],Plefte[mubp]);
-	  double Clefte [2*mconsv+madd];
-	Clefte[mudn] = Plefte[nden]; // rho
-	Clefte[muvu] = Plefte[nve1]*Plefte[nden]; // rho v_x
-	Clefte[muvv] = Plefte[nve2]*Plefte[nden]; // rho v_y
-	Clefte[muvw] = Plefte[nve3]*Plefte[nden]; // rho v_z
-        Clefte[muet] = Plefte[nene]*Plefte[nden]  // e_i
-	              +0.5e0*Plefte[nden]*(                  
-                          +Plefte[nve1]*Plefte[nve1]                 
-                          +Plefte[nve2]*Plefte[nve2]                 
-                          +Plefte[nve3]*Plefte[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Plefte[nbm1]*Plefte[nbm1]                 
-                          +Plefte[nbm2]*Plefte[nbm2]                 
-                          +Plefte[nbm3]*Plefte[nbm3]); // + B^2/2
-
-	Clefte[mubu] = Plefte[nbm1]; // b_x
-	Clefte[mubv] = Plefte[nbm2]; // b_y
-	Clefte[mubw] = Plefte[nbm3]; // b_z
-	Clefte[mubp] = Plefte[nbps]; // psi
-	for(int n=0; n<ncomp;n++){
-	  Clefte[must+n] = Plefte[nden]*Plefte[nst+n]; // composition
-	}
-        double  ptl = Plefte[npre] + ( Plefte[nbm1]*Plefte[nbm1]
-                                      +Plefte[nbm2]*Plefte[nbm2]
-				      +Plefte[nbm3]*Plefte[nbm3])/2.0e0;
-
-	Clefte[mfdn] = Plefte[nden]*Plefte[nve1];
-	Clefte[mfvu] = Plefte[nden]*Plefte[nve1]*Plefte[nve1] 
-	                      + ptl-Plefte[nbm1]*Plefte[nbm1];
-	Clefte[mfvv] = Plefte[nden]*Plefte[nve2]*Plefte[nve1]
-	                           -Plefte[nbm2]*Plefte[nbm1];
-        Clefte[mfvw] = Plefte[nden]*Plefte[nve3]*Plefte[nve1]
-	                           -Plefte[nbm3]*Plefte[nbm1];
-        Clefte[mfet] = (Clefte[muet]+ptl)*Plefte[nve1]
-                           -( Plefte[nbm1]*Plefte[nve1]
-                             +Plefte[nbm2]*Plefte[nve2]
-			     +Plefte[nbm3]*Plefte[nve3])*Plefte[nbm1];
-
-	Clefte[mfbu] =  0.0e0;
-	Clefte[mfbv] =  Plefte[nbm2]*Plefte[nve1]
-	               -Plefte[nve2]*Plefte[nbm1];
-	Clefte[mfbw] =  Plefte[nbm3]*Plefte[nve1]
-	               -Plefte[nve3]*Plefte[nbm1];
-	Clefte[mfbp] = 0.0e0;  // psi
-     
-	for(int n=0; n<ncomp;n++){
-	  Clefte[mfst+n] = Plefte[nden]*Plefte[nst+n]*Plefte[nve1]; // composition
-	}
-	double css = Plefte[ncsp]*Plefte[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Plefte[nbm1]*Plefte[nbm1]  
-                +Plefte[nbm2]*Plefte[nbm2]  
-		+Plefte[nbm3]*Plefte[nbm3] )/Plefte[nden];
-
-         Clefte[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Plefte[nbm1]*Plefte[nbm1] 
-                                            /Plefte[nden])   
-			      )/2.0e0);
-         Clefte[mvel] = Plefte[nve1];//direction dependent
-         Clefte[mpre] = ptl;
-	 // Calculte Right state
-	 
-	  /* | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |  */
-	  /*                     You are here                   */
-	 double Prigte [nprim];
-	  for (int n=0; n<nprim; n++){
-	    dsvp =  Prigtc2[n]- Prigtc1[n];
-	    dsvm =              Prigtc1[n]- Pleftc2[n];
-	    vanLeer(dsvp,dsvm,dsv);
-	    Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
-	  }
-	  double Crigte [2*mconsv+madd];
-
-	Crigte[mudn] = Prigte[nden]; // rho
-	Crigte[muvu] = Prigte[nve1]*Prigte[nden]; // rho v_x
-	Crigte[muvv] = Prigte[nve2]*Prigte[nden]; // rho v_y
-	Crigte[muvw] = Prigte[nve3]*Prigte[nden]; // rho v_z
-        Crigte[muet] = Prigte[nene]*Prigte[nden]  // e_i
-	              +0.5e0*Prigte[nden]*(                  
-                          +Prigte[nve1]*Prigte[nve1]                 
-                          +Prigte[nve2]*Prigte[nve2]                 
-                          +Prigte[nve3]*Prigte[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prigte[nbm1]*Prigte[nbm1]                 
-                          +Prigte[nbm2]*Prigte[nbm2]                 
-                          +Prigte[nbm3]*Prigte[nbm3]); // + B^2/2
-
-	Crigte[mubu] = Prigte[nbm1]; // b_x
-	Crigte[mubv] = Prigte[nbm2]; // b_y
-	Crigte[mubw] = Prigte[nbm3]; // b_z
-	Crigte[mubp] = Prigte[nbps]; // psi
-	
-	for(int n=0; n<ncomp;n++){
-	  Crigte[must+n] = Prigte[nden]*Prigte[nst+n]; // composition
-	}
-	// total pressure
-                 ptl = Prigte[npre] + ( Prigte[nbm1]*Prigte[nbm1]
-                                       +Prigte[nbm2]*Prigte[nbm2]
-				       +Prigte[nbm3]*Prigte[nbm3])/2.0e0;
-
-	Crigte[mfdn] = Prigte[nden]*Prigte[nve1];
-	Crigte[mfvu] = Prigte[nden]*Prigte[nve1]*Prigte[nve1] 
-	                      + ptl-Prigte[nbm1]*Prigte[nbm1];
-	Crigte[mfvv] = Prigte[nden]*Prigte[nve2]*Prigte[nve1]
-	                           -Prigte[nbm2]*Prigte[nbm1];
-        Crigte[mfvw] = Prigte[nden]*Prigte[nve3]*Prigte[nve1]
-	                           -Prigte[nbm3]*Prigte[nbm1];
-        Crigte[mfet] = (Crigte[muet]+ptl)*Prigte[nve1]
-                           -( Prigte[nbm1]*Prigte[nve1]
-                             +Prigte[nbm2]*Prigte[nve2]
-			     +Prigte[nbm3]*Prigte[nve3])*Prigte[nbm1];
-
-	Crigte[mfbu] =  0.0e0;
-	Crigte[mfbv] =  Prigte[nbm2]*Prigte[nve1]
-	               -Prigte[nve2]*Prigte[nbm1];
-	Crigte[mfbw] =  Prigte[nbm3]*Prigte[nve1]
-	               -Prigte[nve3]*Prigte[nbm1];
-	Crigte[mfbp] = 0.0e0;  // psi
-     
-	for(int n=0; n<ncomp;n++){
-	  Crigte[mfst+n] = Prigte[nden]*Prigte[nst+n]*Prigte[nve1]; // composition
-	}
-	       css = Prigte[ncsp]*Prigte[ncsp];
-               cts =  css // c_s^2*c_a^2;
-	     + ( Prigte[nbm1]*Prigte[nbm1]  
-                +Prigte[nbm2]*Prigte[nbm2]  
-		+Prigte[nbm3]*Prigte[nbm3] )/Prigte[nden];
-
-         Crigte[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prigte[nbm1]*Prigte[nbm1] 
-                                            /Prigte[nden])   
-			      )/2.0e0);
-         Crigte[mvel] = Prigte[nve1]; //direction dependent
-         Crigte[mpre] = ptl;
-	 //Calculate flux
-	 //if(i==is)printf("Cleft: %e %e %e %e\n",Clefte[mden],Clefte[mrvu],Clefte[meto],Clefte[mubp]);
-	 double numflux [mconsv];
-	 HLLD(Clefte,Crigte,numflux);
-	 Fx(mden,k,j,i) = numflux[mden];
-	 Fx(mrv1,k,j,i) = numflux[mrvu];
-	 Fx(mrv2,k,j,i) = numflux[mrvv];
-	 Fx(mrv3,k,j,i) = numflux[mrvw];
-	 Fx(meto,k,j,i) = numflux[meto];
-	 //Fx(mbm1,k,j,i) = numflux[mbmu];
-	 Fx(mbm2,k,j,i) = numflux[mbmv];
-	 Fx(mbm3,k,j,i) = numflux[mbmw];
-	 
-	 Fx(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
-	                 -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-	 Fx(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
-			  -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
-	 for(int n=0; n<ncomp;n++){
-	   Fx(mst+n,k,j,i) = numflux[mst+n]; // composition
-	 }
-	}// i-loop
-  }// j,k-loop
-}
-void GetNumericalFlux2(const GridArray<double>&G,const FieldArray<double>& P,FieldArray<double>& Fy){
-  /* | Pleftc1   | Pleftc2 | Prigtc1   | Prigtc2   |              */
-  /*                     You are here                             */
-    
-#pragma omp target teams distribute parallel for collapse(3)
-    for (int k=ks; k<=ke; k++)
-      for (int i=is; i<=ie; i++) {
-	for (int j=js; j<=je+1; j++){
-	  double Pleftc1[nprim];
-	  double Pleftc2[nprim];
-	  double Prigtc1[nprim];
-	  double Prigtc2[nprim];	  
-	  for (int n=0; n<nprim; n++){
-	    Pleftc1[n] = P(n,k,j-2,i);
-	    Pleftc2[n] = P(n,k,j-1,i);
-	    Prigtc1[n] = P(n,k,j  ,i);
-	    Prigtc2[n] = P(n,k,j+1,i);
-	  }
-	  double Plefte [nprim];
-	  double dsvp,dsvm,dsv;
-	  
-	  /* | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |  */
-	  /*                     You are here                   */
-	  // Calculte Left state 
-	  for (int n=0; n<nprim; n++){
-	    dsvp =  Prigtc1[n]- Pleftc2[n];
-	    dsvm =  Pleftc2[n]- Pleftc1[n];
-	    vanLeer(dsvp,dsvm,dsv);
-	    Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
-	  }
-	  double Clefte [2*mconsv+madd];
-	  //direction dependent w,u,v
-	Clefte[mudn] = Plefte[nden]; // rho
-	Clefte[muvw] = Plefte[nve1]*Plefte[nden]; // rho v_x
-	Clefte[muvu] = Plefte[nve2]*Plefte[nden]; // rho v_y
-	Clefte[muvv] = Plefte[nve3]*Plefte[nden]; // rho v_z
-        Clefte[muet] = Plefte[nene]*Plefte[nden]  // e_i
-	              +0.5e0*Plefte[nden]*(                  
-                          +Plefte[nve1]*Plefte[nve1]                 
-                          +Plefte[nve2]*Plefte[nve2]                 
-                          +Plefte[nve3]*Plefte[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Plefte[nbm1]*Plefte[nbm1]                 
-                          +Plefte[nbm2]*Plefte[nbm2]                 
-                          +Plefte[nbm3]*Plefte[nbm3]); // + B^2/2
-
-	Clefte[mubw] = Plefte[nbm1]; // b_x
-	Clefte[mubu] = Plefte[nbm2]; // b_y
-	Clefte[mubv] = Plefte[nbm3]; // b_z
-	Clefte[mubp] = Plefte[nbps]; // psi
-	for(int n=0; n<ncomp; n++){
-	  Clefte[must+n] = Plefte[nden]*Plefte[nst+n]; // composition
-	}
-	
-        double  ptl = Plefte[npre] + ( Plefte[nbm1]*Plefte[nbm1]
-                                      +Plefte[nbm2]*Plefte[nbm2]
-				      +Plefte[nbm3]*Plefte[nbm3])/2.0e0;
-	//direction dependent, nve2 or nbm2
-	Clefte[mfdn] = Plefte[nden]*Plefte[nve2];
-	Clefte[mfvw] = Plefte[nden]*Plefte[nve1]*Plefte[nve2] 
-	                           -Plefte[nbm1]*Plefte[nbm2];
-	Clefte[mfvu] = Plefte[nden]*Plefte[nve2]*Plefte[nve2]
-      	                     + ptl -Plefte[nbm2]*Plefte[nbm2];// p diagnonal
-        Clefte[mfvv] = Plefte[nden]*Plefte[nve3]*Plefte[nve2]
-	                          - Plefte[nbm3]*Plefte[nbm2];
-        Clefte[mfet] = (Clefte[muet]+ptl)*Plefte[nve2]
-                           -( Plefte[nbm1]*Plefte[nve1]
-                             +Plefte[nbm2]*Plefte[nve2]
-			     +Plefte[nbm3]*Plefte[nve3])*Plefte[nbm2];
-
-	Clefte[mfbw] =  Plefte[nbm1]*Plefte[nve2]
-	              - Plefte[nve1]*Plefte[nbm2];
-	Clefte[mfbu] =  0.0;
-	Clefte[mfbv] =  Plefte[nbm3]*Plefte[nve2]
-	              - Plefte[nve3]*Plefte[nbm2];
-	Clefte[mfbp] = 0.0e0;  // psi
-	
-	for(int n=0; n<ncomp; n++){
-	  Clefte[mfst+n] = Plefte[nden]*Plefte[nst+n]*Plefte[nve2]; // composition
-	}
-	double css = Plefte[ncsp]*Plefte[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Plefte[nbm1]*Plefte[nbm1]  
-                +Plefte[nbm2]*Plefte[nbm2]  
-		+Plefte[nbm3]*Plefte[nbm3] )/Plefte[nden];
-
-         Clefte[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Plefte[nbm2]*Plefte[nbm2]  //direction dependent
-                                            /Plefte[nden])   
-			      )/2.0e0);
-         Clefte[mvel] = Plefte[nve2];//direction dependent
-         Clefte[mpre] = ptl;
-	 
-	  /* | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |  */
-	  /*                     You are here                   */
-	 // Calculte Right state	
-	  double Prigte [nprim];
-	  for (int n=0; n<nprim; n++){
-	    dsvp =  Prigtc2[n]- Prigtc1[n];
-	    dsvm =  Prigtc1[n]- Pleftc2[n];
-	    vanLeer(dsvp,dsvm,dsv);
-	    Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
-	  }
-	  //direction dependent w, u,v
-	  double Crigte [2*mconsv+madd];
-	Crigte[mudn] = Prigte[nden]; // rho
-	Crigte[muvw] = Prigte[nve1]*Prigte[nden]; // rho v_x
-	Crigte[muvu] = Prigte[nve2]*Prigte[nden]; // rho v_y
-	Crigte[muvv] = Prigte[nve3]*Prigte[nden]; // rho v_z
-        Crigte[muet] = Prigte[nene]*Prigte[nden]  // e_i
-	              +0.5e0*Prigte[nden]*(                  
-                          +Prigte[nve1]*Prigte[nve1]                 
-                          +Prigte[nve2]*Prigte[nve2]                 
-                          +Prigte[nve3]*Prigte[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prigte[nbm1]*Prigte[nbm1]                 
-                          +Prigte[nbm2]*Prigte[nbm2]                 
-                          +Prigte[nbm3]*Prigte[nbm3]); // + B^2/2
-
-	Crigte[mubw] = Prigte[nbm1]; // b_x
-	Crigte[mubu] = Prigte[nbm2]; // b_y
-	Crigte[mubv] = Prigte[nbm3]; // b_z
-	Crigte[mubp] = Prigte[nbps]; // psi
-	
-	for(int n=0; n<ncomp;n++){
-	  Crigte[must+n] = Prigte[nden]*Prigte[nst+n]; // composition
-	}
-	// total pressure
-                 ptl = Prigte[npre] + ( Prigte[nbm1]*Prigte[nbm1]
-                                       +Prigte[nbm2]*Prigte[nbm2]
-		          	       +Prigte[nbm3]*Prigte[nbm3])/2.0e0;
-
-	//direction dependent, nve2 or nbm2
-	Crigte[mfdn] = Prigte[nden]*Prigte[nve2];
-	Crigte[mfvw] = Prigte[nden]*Prigte[nve1]*Prigte[nve2] 
-	                           -Prigte[nbm1]*Prigte[nbm2];
-	Crigte[mfvu] = Prigte[nden]*Prigte[nve2]*Prigte[nve2]
-	                     + ptl -Prigte[nbm2]*Prigte[nbm2]; //diagnonal
-        Crigte[mfvv] = Prigte[nden]*Prigte[nve3]*Prigte[nve2]
-	                          - Prigte[nbm3]*Prigte[nbm2];
-        Crigte[mfet] = (Crigte[muet]+ptl)*Prigte[nve2]
-                           -( Prigte[nbm1]*Prigte[nve1]
-                             +Prigte[nbm2]*Prigte[nve2]
-			     +Prigte[nbm3]*Prigte[nve3])*Prigte[nbm2];
-
-	Crigte[mfbw] =  Prigte[nbm1]*Prigte[nve2]
-	               -Prigte[nve1]*Prigte[nbm2];
-	Crigte[mfbu] =  0.0e0;
-	Crigte[mfbv] =  Prigte[nbm3]*Prigte[nve2]
-	               -Prigte[nve3]*Prigte[nbm2];
-	Crigte[mfbp] = 0.0e0;  // psi
-     
-	for(int n=0; n<ncomp;n++){
-	  Crigte[mfst+n] = Prigte[nden]*Prigte[nst+n]*Prigte[nve2]; // composition
-	}
-	       css = Prigte[ncsp]*Prigte[ncsp];
-               cts =  css // c_s^2*c_a^2;
-	     + ( Prigte[nbm1]*Prigte[nbm1]  
-                +Prigte[nbm2]*Prigte[nbm2]  
-		+Prigte[nbm3]*Prigte[nbm3] )/Prigte[nden];
-
-         Crigte[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prigte[nbm2]*Prigte[nbm2] 
-                                            /Prigte[nden])   
-			      )/2.0e0);
-         Crigte[mvel] = Prigte[nve2];//direction dependent
-         Crigte[mpre] = ptl;
-	 //Calculate flux
-	  double numflux [mconsv];  
-	 HLLD(Clefte,Crigte,numflux);
-	 Fy(mden,k,j,i) = numflux[mden];
-	 Fy(mrv1,k,j,i) = numflux[mrvw];
-	 Fy(mrv2,k,j,i) = numflux[mrvu];
-	 Fy(mrv3,k,j,i) = numflux[mrvv];
-	 Fy(meto,k,j,i) = numflux[meto];
-	 Fy(mbm1,k,j,i) = numflux[mbmw];
-	 //Fx(mbm2,k,j,i) = numflux[mbmu];
-	 Fy(mbm3,k,j,i) = numflux[mbmv];
-	 
-	 Fy(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
-	                 -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-	 Fy(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
-	        	 -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
-	 for(int n=0; n<ncomp;n++){
-	   Fy(mst+n,k,j,i) = numflux[mst+n]; // composition
-	 }
-	}// j-loop
-  }// k,i-loop
-}
-
-void GetNumericalFlux3(const GridArray<double>&G,const FieldArray<double>& P,FieldArray<double>& Fz){
-  
-#pragma omp target teams distribute parallel for collapse(3)
-  for (int j=js; j<=je; ++j)
-    for (int i=is; i<=ie; ++i){
-      for (int k=ks; k<=ke+1; ++k){
-	double Pleftc1[nprim];
-	double Pleftc2[nprim];
-	double Prigtc1[nprim];
-	double Prigtc2[nprim];
-  
-	  for (int n=0; n<nprim; n++){
-	    Pleftc1[n] = P(n,k-2,j,i);
-	    Pleftc2[n] = P(n,k-1,j,i);
-	    Prigtc1[n] = P(n,k  ,j,i);
-	    Prigtc2[n] = P(n,k+1,j,i);
-	  }
-	  
-	  /* | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |  */
-	  /*                     You are here                   */
-	  // Calculte Left state
-	  double Plefte [nprim];
-	  double dsvp,dsvm,dsv;  
-	  for (int n=0; n<nprim; n++){
-	    dsvp =  Prigtc1[n]- Pleftc2[n];
-	    dsvm =              Pleftc2[n]- Pleftc1[n];
-	    vanLeer(dsvp,dsvm,dsv);
-	    Plefte[n] = Pleftc2[n] + 0.5e0*dsv;
-	  }
-	  double Clefte [2*mconsv+madd];
-	  //direction dependent v,w,u
-	Clefte[mudn] = Plefte[nden]; // rho
-	Clefte[muvv] = Plefte[nve1]*Plefte[nden]; // rho v_x
-	Clefte[muvw] = Plefte[nve2]*Plefte[nden]; // rho v_y
-	Clefte[muvu] = Plefte[nve3]*Plefte[nden]; // rho v_z
-        Clefte[muet] = Plefte[nene]*Plefte[nden]  // e_i
-	              +0.5e0*Plefte[nden]*(                  
-                          +Plefte[nve1]*Plefte[nve1]                 
-                          +Plefte[nve2]*Plefte[nve2]                 
-                          +Plefte[nve3]*Plefte[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Plefte[nbm1]*Plefte[nbm1]                 
-                          +Plefte[nbm2]*Plefte[nbm2]                 
-                          +Plefte[nbm3]*Plefte[nbm3]); // + B^2/2
-
-	Clefte[mubv] = Plefte[nbm1]; // b_x
-	Clefte[mubw] = Plefte[nbm2]; // b_y
-	Clefte[mubu] = Plefte[nbm3]; // b_z
-	Clefte[mubp] = Plefte[nbps]; // psi
-	for(int n=0; n<ncomp;n++){
-	  Clefte[must+n] = Plefte[nden]*Plefte[nst+n]; // composition
-	}
-        double  ptl = Plefte[npre] + ( Plefte[nbm1]*Plefte[nbm1]
-                                      +Plefte[nbm2]*Plefte[nbm2]
-				      +Plefte[nbm3]*Plefte[nbm3])/2.0e0;
-	//direction dependent, nve3 or nbm3
-	Clefte[mfdn] = Plefte[nden]*Plefte[nve3];
-	Clefte[mfvv] = Plefte[nden]*Plefte[nve1]*Plefte[nve3] 
-	                           -Plefte[nbm1]*Plefte[nbm3];
-	Clefte[mfvw] = Plefte[nden]*Plefte[nve2]*Plefte[nve3]
-      	                           -Plefte[nbm2]*Plefte[nbm3];
-        Clefte[mfvu] = Plefte[nden]*Plefte[nve3]*Plefte[nve3]
-	                     + ptl -Plefte[nbm3]*Plefte[nbm3]; // p diagnonal
-        Clefte[mfet] = (Clefte[muet]+ptl)*Plefte[nve3]
-                           -( Plefte[nbm1]*Plefte[nve1]
-                             +Plefte[nbm2]*Plefte[nve2]
-			     +Plefte[nbm3]*Plefte[nve3])*Plefte[nbm3];
-
-	Clefte[mfbv] =  Plefte[nbm1]*Plefte[nve3]
-	              - Plefte[nve1]*Plefte[nbm3];
-	Clefte[mfbw] =  Plefte[nbm2]*Plefte[nve3]
-	              - Plefte[nve2]*Plefte[nbm3];
-	Clefte[mfbu] = 0.0e0;
-	Clefte[mfbp] = 0.0e0;  // psi
-	
-	for(int n=0; n<ncomp;n++){
-	  Clefte[mfst+n] = Plefte[nden]*Plefte[nst+n]*Plefte[nve3]; // composition
-	}
-	double css = Plefte[ncsp]*Plefte[ncsp];
-        double cts =  css // c_s^2*c_a^2;
-	     + ( Plefte[nbm1]*Plefte[nbm1]  
-                +Plefte[nbm2]*Plefte[nbm2]  
-		+Plefte[nbm3]*Plefte[nbm3] )/Plefte[nden];
-
-         Clefte[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Plefte[nbm3]*Plefte[nbm3]  //direction dependent
-                                            /Plefte[nden])   
-			      )/2.0e0);
-         Clefte[mvel] = Plefte[nve3];//direction
-         Clefte[mpre] = ptl;
-
-	  /* | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |  */
-	  /*                     You are here                   */
-	 // Calculte Right state
-	  double Prigte [nprim];	  
-	  for (int n=0; n<nprim; n++){
-	    dsvp =  Prigtc2[n]- Prigtc1[n];
-	    dsvm =              Prigtc1[n]- Pleftc2[n];
-	    vanLeer(dsvp,dsvm,dsv);
-	    Prigte[n] = Prigtc1[n] - 0.5e0*dsv;
-	  }
-	  //direction dependent w, u,v
-	  double Crigte [2*mconsv+madd];
-	Crigte[mudn] = Prigte[nden]; // rho
-	Crigte[muvv] = Prigte[nve1]*Prigte[nden]; // rho v_x
-	Crigte[muvw] = Prigte[nve2]*Prigte[nden]; // rho v_y
-	Crigte[muvu] = Prigte[nve3]*Prigte[nden]; // rho v_z
-        Crigte[muet] = Prigte[nene]*Prigte[nden]  // e_i
-	              +0.5e0*Prigte[nden]*(                  
-                          +Prigte[nve1]*Prigte[nve1]                 
-                          +Prigte[nve2]*Prigte[nve2]                 
-                          +Prigte[nve3]*Prigte[nve3])  // + rho v^2/2
-                      +0.5e0*             (                 
-                          +Prigte[nbm1]*Prigte[nbm1]                 
-                          +Prigte[nbm2]*Prigte[nbm2]                 
-                          +Prigte[nbm3]*Prigte[nbm3]); // + B^2/2
-
-	Crigte[mubv] = Prigte[nbm1]; // b_x
-	Crigte[mubw] = Prigte[nbm2]; // b_y
-	Crigte[mubu] = Prigte[nbm3]; // b_z
-	Crigte[mubp] = Prigte[nbps]; // psi
-
-	for(int n=0; n<ncomp;n++){
-	  Crigte[must+n] = Prigte[nden]*Prigte[nst+n]; // composition
-	}
-	
-	// total pressure
-                 ptl = Prigte[npre] + ( Prigte[nbm1]*Prigte[nbm1]
-                                       +Prigte[nbm2]*Prigte[nbm2]
-		          	       +Prigte[nbm3]*Prigte[nbm3])/2.0e0;
-
-	//direction dependent, nve3 or nbm3
-	Crigte[mfdn] = Prigte[nden]             *Prigte[nve3];
-	Crigte[mfvv] = Prigte[nden]*Prigte[nve1]*Prigte[nve3] 
-	                           -Prigte[nbm1]*Prigte[nbm3];
-	Crigte[mfvw] = Prigte[nden]*Prigte[nve2]*Prigte[nve3]
-	                           -Prigte[nbm2]*Prigte[nbm3]; 
-        Crigte[mfvu] = Prigte[nden]*Prigte[nve3]*Prigte[nve3]
-	                     + ptl -Prigte[nbm3]*Prigte[nbm3]; //diagnonal
-        Crigte[mfet] = (Crigte[muet]       +ptl)*Prigte[nve3]
-                           -( Prigte[nbm1]*Prigte[nve1]
-                             +Prigte[nbm2]*Prigte[nve2]
-			     +Prigte[nbm3]*Prigte[nve3])*Prigte[nbm3];
-
-	Crigte[mfbv] =  Prigte[nbm1]*Prigte[nve3]
-	               -Prigte[nve1]*Prigte[nbm3];
-	Crigte[mfbw] =  Prigte[nbm2]*Prigte[nve3]
-	               -Prigte[nve2]*Prigte[nbm3];
-	Crigte[mfbu] = 0.0e0;
-	Crigte[mfbp] = 0.0e0;  // psi
-     
-	for(int n=0; n<ncomp;n++){
-	  Crigte[mfst+n] = Prigte[nden]*Prigte[nst+n]*Prigte[nve3]; // composition
-	}
-	       css = Prigte[ncsp]*Prigte[ncsp];
-               cts =  css // c_s^2*c_a^2;
-	     + ( Prigte[nbm1]*Prigte[nbm1]  
-                +Prigte[nbm2]*Prigte[nbm2]  
-		+Prigte[nbm3]*Prigte[nbm3] )/Prigte[nden];
-
-         Crigte[mcsp] = sqrt((cts +sqrt(cts*cts
-                                  -4.0e0*css*Prigte[nbm3]*Prigte[nbm3] 
-                                            /Prigte[nden])   
-			      )/2.0e0);
-         Crigte[mvel] = Prigte[nve3];//direction dependent
-         Crigte[mpre] = ptl;
-	 //Calculate flux
-	  double numflux [mconsv];
-	 HLLD(Clefte,Crigte,numflux);
-	 Fz(mden,k,j,i) = numflux[mden];
-	 Fz(mrv1,k,j,i) = numflux[mrvv];
-	 Fz(mrv2,k,j,i) = numflux[mrvw];
-	 Fz(mrv3,k,j,i) = numflux[mrvu];
-	 Fz(meto,k,j,i) = numflux[meto];
-	 Fz(mbm1,k,j,i) = numflux[mbmv];
-	 Fz(mbm2,k,j,i) = numflux[mbmw];
-	 //Fz(mbm3,k,j,i) = numflux[mbm];
-	 
-	 Fz(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
-	                 -0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-	 Fz(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
-	        	 -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
-	 for(int n=0; n<ncomp;n++){
-	   Fz(mst+n,k,j,i) = numflux[mst+n]; // composition
-	 }
-	}// k-loop
-  }// i,j-loop
-
-}
-
 void GetNumericalFluxD(
 		const int idir, 
 		const GridArray<double>&G,
@@ -1225,28 +657,28 @@ void GetNumericalFluxD(
 			double Crigte [2*mconsv+madd];
 
 			for (int n=0; n<nprim; n++){
-			Pleftc1[n] = P(n,k,j,i-2);
-			Pleftc2[n] = P(n,k,j,i-1);
-			Prigtc1[n] = P(n,k,j,i  );
-			Prigtc2[n] = P(n,k,j,i+1);
+			Pleftc1[n] = P.dev(n,k,j,i-2);
+			Pleftc2[n] = P.dev(n,k,j,i-1);
+			Prigtc1[n] = P.dev(n,k,j,i  );
+			Prigtc2[n] = P.dev(n,k,j,i+1);
 			}
 			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, 1);
 
-			F.href(mden,k,j,i) = numflux[mden];
-			F.href(mrv1,k,j,i) = numflux[mrvu];
-			F.href(mrv2,k,j,i) = numflux[mrvv];
-			F.href(mrv3,k,j,i) = numflux[mrvw];
-			F.href(meto,k,j,i) = numflux[meto];
-			//F.href(mbm1,k,j,i) = numflux[mbmu];
-			F.href(mbm2,k,j,i) = numflux[mbmv];
-			F.href(mbm3,k,j,i) = numflux[mbmw];
+			F.dref(mden,k,j,i) = numflux[mden];
+			F.dref(mrv1,k,j,i) = numflux[mrvu];
+			F.dref(mrv2,k,j,i) = numflux[mrvv];
+			F.dref(mrv3,k,j,i) = numflux[mrvw];
+			F.dref(meto,k,j,i) = numflux[meto];
+			//F.dref(mbm1,k,j,i) = numflux[mbmu];
+			F.dref(mbm2,k,j,i) = numflux[mbmv];
+			F.dref(mbm3,k,j,i) = numflux[mbmw];
 
-			F.href(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+			F.dref(mbm1,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
 				-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-			F.href(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+			F.dref(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
 					-0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
 			for(int n=0; n<ncomp;n++){
-				F.href(mst+n,k,j,i) = numflux[mst+n]; // composition
+				F.dref(mst+n,k,j,i) = numflux[mst+n]; // composition
 			}
 		});
 #endif
@@ -1302,10 +734,10 @@ void GetNumericalFluxD(
 			double Prigtc1[nprim];
 			double Prigtc2[nprim];	  
 			for (int n=0; n<nprim; n++){
-			Pleftc1[n] = P(n,k,j-2,i);
-			Pleftc2[n] = P(n,k,j-1,i);
-			Prigtc1[n] = P(n,k,j  ,i);
-			Prigtc2[n] = P(n,k,j+1,i);
+			Pleftc1[n] = P.dev(n,k,j-2,i);
+			Pleftc2[n] = P.dev(n,k,j-1,i);
+			Prigtc1[n] = P.dev(n,k,j  ,i);
+			Prigtc2[n] = P.dev(n,k,j+1,i);
 			}
 
 			double numflux [mconsv];
@@ -1313,21 +745,21 @@ void GetNumericalFluxD(
 			double Crigte [2*mconsv+madd];
 			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, 2);
 
-			F.href(mden,k,j,i) = numflux[mden];
-			F.href(mrv1,k,j,i) = numflux[mrvw];
-			F.href(mrv2,k,j,i) = numflux[mrvu];
-			F.href(mrv3,k,j,i) = numflux[mrvv];
-			F.href(meto,k,j,i) = numflux[meto];
-			F.href(mbm1,k,j,i) = numflux[mbmw];
-			//F.href(mbm2,k,j,i) = numflux[mbmu];
-			F.href(mbm3,k,j,i) = numflux[mbmv];
+			F.dref(mden,k,j,i) = numflux[mden];
+			F.dref(mrv1,k,j,i) = numflux[mrvw];
+			F.dref(mrv2,k,j,i) = numflux[mrvu];
+			F.dref(mrv3,k,j,i) = numflux[mrvv];
+			F.dref(meto,k,j,i) = numflux[meto];
+			F.dref(mbm1,k,j,i) = numflux[mbmw];
+			//F.dref(mbm2,k,j,i) = numflux[mbmu];
+			F.dref(mbm3,k,j,i) = numflux[mbmv];
 
-			F.href(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+			F.dref(mbm2,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
 				-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-			F.href(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+			F.dref(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
 					-0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
 			for(int n=0; n<ncomp;n++){
-				F.href(mst+n,k,j,i) = numflux[mst+n]; // composition
+				F.dref(mst+n,k,j,i) = numflux[mst+n]; // composition
 			}
 		});
 #endif
@@ -1391,28 +823,28 @@ void GetNumericalFluxD(
 			double Crigte [2*mconsv+madd];
 
 			for (int n=0; n<nprim; n++){
-				Pleftc1[n] = P(n,k-2,j,i);
-				Pleftc2[n] = P(n,k-1,j,i);
-				Prigtc1[n] = P(n,k  ,j,i);
-				Prigtc2[n] = P(n,k+1,j,i);
+				Pleftc1[n] = P.dev(n,k-2,j,i);
+				Pleftc2[n] = P.dev(n,k-1,j,i);
+				Prigtc1[n] = P.dev(n,k  ,j,i);
+				Prigtc2[n] = P.dev(n,k+1,j,i);
 			}
 			CalcFlux(Pleftc1, Pleftc2, Prigtc1, Prigtc2, numflux, Clefte, Crigte, 3);
 
-			F.href(mden,k,j,i) = numflux[mden];
-			F.href(mrv1,k,j,i) = numflux[mrvv];
-			F.href(mrv2,k,j,i) = numflux[mrvw];
-			F.href(mrv3,k,j,i) = numflux[mrvu];
-			F.href(meto,k,j,i) = numflux[meto];
-			F.href(mbm1,k,j,i) = numflux[mbmv];
-			F.href(mbm2,k,j,i) = numflux[mbmw];
-			//F.href(mbm3,k,j,i) = numflux[mbm];
+			F.dref(mden,k,j,i) = numflux[mden];
+			F.dref(mrv1,k,j,i) = numflux[mrvv];
+			F.dref(mrv2,k,j,i) = numflux[mrvw];
+			F.dref(mrv3,k,j,i) = numflux[mrvu];
+			F.dref(meto,k,j,i) = numflux[meto];
+			F.dref(mbm1,k,j,i) = numflux[mbmv];
+			F.dref(mbm2,k,j,i) = numflux[mbmw];
+			//F.dref(mbm3,k,j,i) = numflux[mbm];
 
-			F.href(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
+			F.dref(mbm3,k,j,i) = 0.5e0*    (Clefte[mubp]+Crigte[mubp])
 					-0.5e0*chg*(Crigte[mubu]-Clefte[mubu]);
-			F.href(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
+			F.dref(mbps,k,j,i) =(0.5e0*    (Clefte[mubu]+Crigte[mubu])
 				       -0.5e0/chg*(Crigte[mubp]-Clefte[mubp]))*chg*chg;
 			for(int n=0; n<ncomp;n++){
-				F.href(mst+n,k,j,i) = numflux[mst+n]; // composition
+				F.dref(mst+n,k,j,i) = numflux[mst+n]; // composition
 			}
 		});
 #endif
@@ -1442,13 +874,13 @@ void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,cons
 	Kokkos::parallel_for("UpdateConservU",
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
-		const double xinv = 1.0 / (G.x1a(i+1)-G.x1a(i));
-		const double yinv = 1.0 / (G.x2a(i+1)-G.x2a(i));
-		const double zinv = 1.0 / (G.x3a(i+1)-G.x3a(i));
+		const double xinv = 1.0 / (G.dev_x1a(i+1)-G.dev_x1a(i));
+		const double yinv = 1.0 / (G.dev_x2a(i+1)-G.dev_x2a(i));
+		const double zinv = 1.0 / (G.dev_x3a(i+1)-G.dev_x3a(i));
 		for (int m=0; m<mconsv; m++) {
-			U.href(m,k,j,i) -= dt * ( (Fx(m,k,j,i+1) - Fx(m,k,j,i)) * xinv
-			                         +(Fy(m,k,j+1,i) - Fy(m,k,j,i)) * yinv
-			                         +(Fz(m,k+1,j,i) - Fz(m,k,j,i)) * zinv );
+			U.dref(m,k,j,i) -= dt * ( (Fx.dev(m,k,j,i+1) - Fx.dev(m,k,j,i)) * xinv
+			                         +(Fy.dev(m,k,j+1,i) - Fy.dev(m,k,j,i)) * yinv
+			                         +(Fz.dev(m,k+1,j,i) - Fz.dev(m,k,j,i)) * zinv );
 		}
 	});
 #endif
@@ -1662,9 +1094,13 @@ void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
 #if 0
 		double dhl = std::min({G.x1a(i+1)-G.x1a(i), G.x2a(j+1)-G.x2a(j), G.x3a(k+1)-G.x3a(k)});
 #endif
-		double dhl = fmin3(G.x1a(i+1)-G.x1a(i), G.x2a(j+1)-G.x2a(j), G.x3a(k+1)-G.x3a(k));
+		double dx = G.dev_x1a(i+1)-G.dev_x1a(i);
+		double dy = G.dev_x2a(j+1)-G.dev_x2a(j);
+		double dz = G.dev_x3a(k+1)-G.dev_x3a(k);
+
+		double dhl = fmin3(dx, dy, dz);
 		double taui = alphabp * chg/dhl;
-		U.href(mbps,k,j,i) = U(mbps,k,j,i) * (1.0e0-dt*taui);
+		U.dref(mbps,k,j,i) = U.dev(mbps,k,j,i) * (1.0e0-dt*taui);
 	});
 #endif
 }

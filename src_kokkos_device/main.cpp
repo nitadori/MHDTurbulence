@@ -241,8 +241,6 @@ int main(int argc, char **argv) {
     SetBoundaryCondition(P,Bs,Br);
 
     EvaluateCh();
-    P.d2h();
-    break;
 
     if(fpdt && step<100){
 	    fprintf(fpdt, "step=%d, time=%e, dt=%e, chg=%e\n", step, time_sim, dt, chg);
@@ -260,10 +258,17 @@ int main(int argc, char **argv) {
     GetNumericalFluxD(1, G,P,Fx);
     GetNumericalFluxD(2, G,P,Fy);
     GetNumericalFluxD(3, G,P,Fz);
-#endif
 
     UpdateConservU(G,Fx,Fy,Fz,U);
+
     DampPsi(G,U);
+#endif
+    P.d2h();
+    U.d2h();
+#ifdef __CUDACC__
+    break;
+#endif
+
     UpdatePrimitvP(U,P);
 
     time_sim += dt;
