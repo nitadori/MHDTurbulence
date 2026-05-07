@@ -1556,12 +1556,21 @@ void ControlTimestep(const GridArray<double>& G){
 		      	  Sqr(P(ncsp,k,j,i))
 			  + Norm2(P(nbm1,k,j,i), P(nbm2,k,j,i), P(nbm3,k,j,i)) / P(nden,k,j,i)
 			  ); 
+#if 0
 	  double dt= std::min({ 
 			  (G.x1a(i+1)-G.x1a(i))/(std::abs(P(nve1,k,j,i))+ctot),
 			  (G.x2a(j+1)-G.x2a(j))/(std::abs(P(nve2,k,j,i))+ctot),
 			  (G.x3a(k+1)-G.x3a(k))/(std::abs(P(nve3,k,j,i))+ctot)
 		  });
 	  dtminloc = std::fmin(dtminloc, dt);
+#else
+	  dtminloc = Kokkos::fmin(
+			  Kokkos::fmin(dtminloc, 
+				       (G.x1a(i+1)-G.x1a(i))/(std::abs(P(nve1,k,j,i))+ctot)),
+			  Kokkos::fmin((G.x2a(j+1)-G.x2a(j))/(std::abs(P(nve2,k,j,i))+ctot),
+				       (G.x3a(k+1)-G.x3a(k))/(std::abs(P(nve3,k,j,i))+ctot))
+			  );
+#endif
 	},
 	Kokkos::Min<double>(dtminl)
 	);
@@ -1612,7 +1621,13 @@ void EvaluateCh(){
 		double cm3 = sqrt((cts+sqrt(cts*cts-4.0e0*css*ca3))/2.0e0);
 		double ch3 = (std::abs(P(nve3,k,j,i))+cm3);
 
+#if 0
 		chgll = std::max({chgll,ch1,ch2,ch3});
+#else
+		chgll = Kokkos::fmax(
+				Kokkos::fmax(chgll, ch1),
+				Kokkos::fmax(ch2, ch3));
+#endif
 	},
 	Kokkos::Max<double>(chgloc)
 	);
@@ -1628,6 +1643,9 @@ void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
   const double alphabp = 0.1e0;
   auto chg = hydflux_mod::chg;
   auto dt = resolution_mod::dt;
+  auto fmin3 = KOKKOS_LAMBDA(double x, double y, double z){
+	  return Kokkos::fmin(x, Kokkos::fmin(y, z));
+  };
 #if 0
 // #pragma omp target teams distribute parallel for collapse(3)
   for (int k=ks; k<=ke; k++)
@@ -1641,7 +1659,10 @@ void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
 	Kokkos::parallel_for("DampPsi",
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
+#if 0
 		double dhl = std::min({G.x1a(i+1)-G.x1a(i), G.x2a(j+1)-G.x2a(j), G.x3a(k+1)-G.x3a(k)});
+#endif
+		double dhl = fmin3(G.x1a(i+1)-G.x1a(i), G.x2a(j+1)-G.x2a(j), G.x3a(k+1)-G.x3a(k));
 		double taui = alphabp * chg/dhl;
 		U.href(mbps,k,j,i) = U(mbps,k,j,i) * (1.0e0-dt*taui);
 	});
