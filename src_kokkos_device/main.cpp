@@ -231,7 +231,6 @@ int main(int argc, char **argv) {
 
   for (step=0;step<stepmax;step++){
 
-    P.h2d();
     ControlTimestep(G); 
 
     // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
@@ -259,10 +258,6 @@ int main(int argc, char **argv) {
     DampPsi(G,U);
 
     UpdatePrimitvP(U,P);
-    P.d2h();
-#ifdef __CUDACC__
-    break;
-#endif
 
     time_sim += dt;
     // printf("dt=%e\n",dt);
