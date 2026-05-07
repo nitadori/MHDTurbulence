@@ -257,13 +257,12 @@ int main(int argc, char **argv) {
     UpdateConservU(G,Fx,Fy,Fz,U);
 
     DampPsi(G,U);
+
+    UpdatePrimitvP(U,P);
     P.d2h();
-    U.d2h();
 #ifdef __CUDACC__
     break;
 #endif
-
-    UpdatePrimitvP(U,P);
 
     time_sim += dt;
     // printf("dt=%e\n",dt);

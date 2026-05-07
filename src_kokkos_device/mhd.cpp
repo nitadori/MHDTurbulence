@@ -925,25 +925,25 @@ void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P){
 	Kokkos::parallel_for("UpdatePrimitvP",
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
-		const double rho =  U(mden,k,j,i);
+		const double rho =  U.dev(mden,k,j,i);
 		const double rhoinv = 1.0 / rho;
-		P.href(nden,k,j,i) = rho;
-		P.href(nve1,k,j,i) = U(mrv1,k,j,i) * rhoinv;
-		P.href(nve2,k,j,i) = U(mrv2,k,j,i) * rhoinv;
-		P.href(nve3,k,j,i) = U(mrv3,k,j,i) * rhoinv;
-		double ekin = 0.5e0*Norm2(U(mrv1,k,j,i), U(mrv2,k,j,i), U(mrv3,k,j,i)) * rhoinv;
-		double emag = 0.5e0*Norm2(U(mbm1,k,j,i), U(mbm2,k,j,i), U(mbm3,k,j,i));
-		P.href(nene,k,j,i) =  (U(meto,k,j,i)-ekin-emag)/U(mden,k,j,i);//specific internal energy
-		//P.href(npre,k,j,i) =  U(mden,k,j,i) * csiso * csiso;
-		P.href(npre,k,j,i) = P(nene,k,j,i) * P(nden,k,j,i) * (gam-1.0); 
-		//P.href(ncsp,k,j,i) =  csiso;
-		P.href(ncsp,k,j,i) = sqrt(P(nene,k,j,i) * gam * (gam-1.0));
-		P.href(nbm1,k,j,i) =  U(mbm1,k,j,i);
-		P.href(nbm2,k,j,i) =  U(mbm2,k,j,i);
-		P.href(nbm3,k,j,i) =  U(mbm3,k,j,i);
-		P.href(nbps,k,j,i) =  U(mbps,k,j,i);
+		P.dref(nden,k,j,i) = rho;
+		P.dref(nve1,k,j,i) = U.dev(mrv1,k,j,i) * rhoinv;
+		P.dref(nve2,k,j,i) = U.dev(mrv2,k,j,i) * rhoinv;
+		P.dref(nve3,k,j,i) = U.dev(mrv3,k,j,i) * rhoinv;
+		double ekin = 0.5e0*Norm2(U.dev(mrv1,k,j,i), U.dev(mrv2,k,j,i), U.dev(mrv3,k,j,i)) * rhoinv;
+		double emag = 0.5e0*Norm2(U.dev(mbm1,k,j,i), U.dev(mbm2,k,j,i), U.dev(mbm3,k,j,i));
+		P.dref(nene,k,j,i) =  (U.dev(meto,k,j,i)-ekin-emag)/U.dev(mden,k,j,i);//specific internal energy
+		//P.dref(npre,k,j,i) =  U.dev(mden,k,j,i) * csiso * csiso;
+		P.dref(npre,k,j,i) = P.dev(nene,k,j,i) * P.dev(nden,k,j,i) * (gam-1.0); 
+		//P.dref(ncsp,k,j,i) =  csiso;
+		P.dref(ncsp,k,j,i) = sqrt(P.dev(nene,k,j,i) * gam * (gam-1.0));
+		P.dref(nbm1,k,j,i) =  U.dev(mbm1,k,j,i);
+		P.dref(nbm2,k,j,i) =  U.dev(mbm2,k,j,i);
+		P.dref(nbm3,k,j,i) =  U.dev(mbm3,k,j,i);
+		P.dref(nbps,k,j,i) =  U.dev(mbps,k,j,i);
 		for(int n=0;n<ncomp;n++){
-			P.href(nst+n,k,j,i) = U(mst+n,k,j,i) * rhoinv;
+			P.dref(nst+n,k,j,i) = U.dev(mst+n,k,j,i) * rhoinv;
 		}
 	});
 #endif
