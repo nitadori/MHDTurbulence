@@ -250,11 +250,6 @@ int main(int argc, char **argv) {
 	    fpdt = nullptr;
     }
 
-#if 0
-    GetNumericalFlux1(G,P,Fx);
-    GetNumericalFlux2(G,P,Fy);
-    GetNumericalFlux3(G,P,Fz);
-#else
     GetNumericalFluxD(1, G,P,Fx);
     GetNumericalFluxD(2, G,P,Fy);
     GetNumericalFluxD(3, G,P,Fz);
@@ -262,7 +257,6 @@ int main(int argc, char **argv) {
     UpdateConservU(G,Fx,Fy,Fz,U);
 
     DampPsi(G,U);
-#endif
     P.d2h();
     U.d2h();
 #ifdef __CUDACC__

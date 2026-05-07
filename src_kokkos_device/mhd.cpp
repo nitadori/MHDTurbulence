@@ -889,6 +889,7 @@ void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,cons
 
 void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P){
 	auto gam = hydflux_mod::gam;
+  	auto Norm2 = KOKKOS_LAMBDA(double x, double y, double z) { return x*x + y*y + z*z; };
 
   //printf("U:et b1 b2 b3=%e %e %e %e\n",U(meto,ks,js,is),U(mbm1,ks,js,is),U(mbm2,ks,js,is),U(mbm3,ks,js,is));
 #if 0
@@ -930,12 +931,8 @@ void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P){
 		P.href(nve1,k,j,i) = U(mrv1,k,j,i) * rhoinv;
 		P.href(nve2,k,j,i) = U(mrv2,k,j,i) * rhoinv;
 		P.href(nve3,k,j,i) = U(mrv3,k,j,i) * rhoinv;
-		double ekin = 0.5e0*( U(mrv1,k,j,i)*U(mrv1,k,j,i)
-				+U(mrv2,k,j,i)*U(mrv2,k,j,i)
-				+U(mrv3,k,j,i)*U(mrv3,k,j,i)) * rhoinv;
-		double emag = 0.5e0*( U(mbm1,k,j,i)*U(mbm1,k,j,i)
-				+U(mbm2,k,j,i)*U(mbm2,k,j,i)
-				+U(mbm3,k,j,i)*U(mbm3,k,j,i));
+		double ekin = 0.5e0*Norm2(U(mrv1,k,j,i), U(mrv2,k,j,i), U(mrv3,k,j,i)) * rhoinv;
+		double emag = 0.5e0*Norm2(U(mbm1,k,j,i), U(mbm2,k,j,i), U(mbm3,k,j,i));
 		P.href(nene,k,j,i) =  (U(meto,k,j,i)-ekin-emag)/U(mden,k,j,i);//specific internal energy
 		//P.href(npre,k,j,i) =  U(mden,k,j,i) * csiso * csiso;
 		P.href(npre,k,j,i) = P(nene,k,j,i) * P(nden,k,j,i) * (gam-1.0); 
