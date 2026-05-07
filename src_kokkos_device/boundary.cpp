@@ -564,16 +564,16 @@ if (n2m != MPI_PROC_NULL) {
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_in == periodicb) {
 			for (int n=0; n<nprim; n++){
-				Br.Zs(n,k,j,i) = Bs.Zs(n,k,j,i);
+				Br.dev_Zs(n,k,j,i) = Bs.dev_Zs(n,k,j,i);
 			}
 		} else if (bc_in == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Zs(n,k,j,i) = Bs.Ze(n,ngh-1-k,j,i);
+				Br.dev_Zs(n,k,j,i) = Bs.dev_Ze(n,ngh-1-k,j,i);
 			}
-			Br.Zs(nve3,k,j,i) = -Br.Zs(nve3,k,j,i);
+			Br.dev_Zs(nve3,k,j,i) = -Br.dev_Zs(nve3,k,j,i);
 		} else if (bc_in == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Zs(n,k,j,i) = Bs.Ze(n,0,j,i);
+				Br.dev_Zs(n,k,j,i) = Bs.dev_Ze(n,0,j,i);
 			}
 		}
 	});
@@ -613,16 +613,16 @@ if (n2m != MPI_PROC_NULL) {
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (bc_out== periodicb) {
 			for (int n=0; n<nprim; n++){
-				Br.Ze(n,k,j,i) = Bs.Ze(n,k,j,i);
+				Br.dev_Ze(n,k,j,i) = Bs.dev_Ze(n,k,j,i);
 			}
 		} else if (bc_out== reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1-k,j,i);
+				Br.dev_Ze(n,k,j,i) = Bs.dev_Zs(n,ngh-1-k,j,i);
 			}
-			Br.Ze(nve3,k,j,i) = -Br.Ze(nve3,k,j,i);
+			Br.dev_Ze(nve3,k,j,i) = -Br.dev_Ze(nve3,k,j,i);
 		} else if (bc_out== outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1,j,i);
+				Br.dev_Ze(n,k,j,i) = Bs.dev_Zs(n,ngh-1,j,i);
 			}
 		}
 	});
@@ -637,6 +637,7 @@ if (n2m != MPI_PROC_NULL) {
     double* h_Br_Ze = Br.Ze_data;
 if (n3m != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Zs, Br.size3, MPI_DOUBLE, n3m, 3100, comm3d, &req[nreq++]);
+      Bs.d2h_Ze();
       rc = MPI_Isend(h_Bs_Ze, Bs.size3, MPI_DOUBLE, n3m, 3200, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -666,12 +667,12 @@ if (n3m != MPI_PROC_NULL) {
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_zin == reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Zs(n,k,j,i) = Bs.Ze(n,ngh-1-k,j,i);
+				Br.dev_Zs(n,k,j,i) = Bs.dev_Ze(n,ngh-1-k,j,i);
 			}
-			Br.Zs(nve3,k,j,i) = -Br.Zs(nve3,k,j,i);
+			Br.dev_Zs(nve3,k,j,i) = -Br.dev_Zs(nve3,k,j,i);
 		} else if (boundary_zin == outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Zs(n,k,j,i) = Bs.Ze(n,0,j,i);
+				Br.dev_Zs(n,k,j,i) = Bs.dev_Ze(n,0,j,i);
 			}
 		}
 	});
@@ -680,6 +681,7 @@ if (n3m != MPI_PROC_NULL) {
 
     if (n3p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ze, Br.size3, MPI_DOUBLE, n3p, 3200, comm3d, &req[nreq++]);
+      Bs.d2h_Zs();
       rc = MPI_Isend(h_Bs_Zs, Bs.size3, MPI_DOUBLE, n3p, 3100, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -709,12 +711,12 @@ if (n3m != MPI_PROC_NULL) {
 	KOKKOS_LAMBDA(const int i, const int j, const int k) {
 		if (boundary_zout== reflection) {
 			for (int n=0; n<nprim; n++){
-				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1-k,j,i);
+				Br.dev_Ze(n,k,j,i) = Bs.dev_Zs(n,ngh-1-k,j,i);
 			}
-			Br.Ze(nve3,k,j,i) = -Br.Ze(nve3,k,j,i);
+			Br.dev_Ze(nve3,k,j,i) = -Br.dev_Ze(nve3,k,j,i);
 		} else if (boundary_zout== outflow) {
 			for (int n=0; n<nprim; n++){
-				Br.Ze(n,k,j,i) = Bs.Zs(n,ngh-1,j,i);
+				Br.dev_Ze(n,k,j,i) = Bs.dev_Zs(n,ngh-1,j,i);
 			}
 		}
 	});
@@ -751,6 +753,19 @@ if (ntiles[dir3] != 1) {
   if (n3p != MPI_PROC_NULL) {
 	#pragma omp target update to(Br.Ze_data[0:Br.size3])
 	  }
+}
+#else
+if (ntiles[dir1] != 1) {
+	if (n1m != MPI_PROC_NULL) { Br.h2d_Xs(); }
+	if (n1p != MPI_PROC_NULL) { Br.h2d_Xe(); }
+}
+if (ntiles[dir2] != 1) {
+	if (n2m != MPI_PROC_NULL) { Br.h2d_Ys(); }
+	if (n2p != MPI_PROC_NULL) { Br.h2d_Ye(); }
+}
+if (ntiles[dir3] != 1) {
+	if (n3m != MPI_PROC_NULL) { Br.h2d_Zs(); }
+	if (n3p != MPI_PROC_NULL) { Br.h2d_Ze(); }
 }
 #endif
 
