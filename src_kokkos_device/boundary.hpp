@@ -9,6 +9,7 @@
 
 #include "config.hpp"
 #include "mhd.hpp"
+#include "mpi_config.hpp"
 using namespace hydflux_mod;
 
 namespace boundary_mod {
@@ -90,12 +91,21 @@ namespace boundary_mod {
       h_Zs = Kokkos::create_mirror_view(d_Zs);
       h_Ze = Kokkos::create_mirror_view(d_Ze);
       
-      Xs_data = h_Xs.data();
-      Xe_data = h_Xe.data();
-      Ys_data = h_Ys.data();
-      Ye_data = h_Ye.data();
-      Zs_data = h_Zs.data();
-      Ze_data = h_Ze.data();
+      if(mpi_config_mod::gpu_aware){
+	      Xs_data = d_Xs.data();
+	      Xe_data = d_Xe.data();
+	      Ys_data = d_Ys.data();
+	      Ye_data = d_Ye.data();
+	      Zs_data = d_Zs.data();
+	      Ze_data = d_Ze.data();
+      }else{
+	      Xs_data = h_Xs.data();
+	      Xe_data = h_Xe.data();
+	      Ys_data = h_Ys.data();
+	      Ye_data = h_Ye.data();
+	      Zs_data = h_Zs.data();
+	      Ze_data = h_Ze.data();
+      }
 
       size1 = d_Xs.size();
       size2 = d_Ys.size();

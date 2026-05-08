@@ -210,6 +210,7 @@ int main(int argc, char **argv) {
   
   AllocateHydroVariables(G,U,Fx,Fy,Fz,P);
  
+  mpi_config_mod::gpu_aware = true;
   AllocateBoundaryVariables(Bs,Br);
   
   if (myid_w == 0) printf("grid size for x y z = %i %i %i\n",ngrid1*ntiles[dir1],ngrid2*ntiles[dir2],ngrid3*ntiles[dir3]);

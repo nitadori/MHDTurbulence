@@ -236,7 +236,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     double* h_Br_Xs = Br.Xs_data;
     double* h_Br_Xe = Br.Xe_data;
     if (n1m != MPI_PROC_NULL) {
-      Bs.d2h_Xe();
+      if(!gpu_aware) Bs.d2h_Xe();
       rc = MPI_Irecv(h_Br_Xs, Br.size1, MPI_DOUBLE, n1m, 1100, comm3d, &req[nreq++]);
       rc = MPI_Isend(h_Bs_Xe, Bs.size1, MPI_DOUBLE, n1m, 1200, comm3d, &req[nreq++]);
     } else {
@@ -282,7 +282,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
 
     if (n1p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Xe, Br.size1, MPI_DOUBLE, n1p, 1200, comm3d, &req[nreq++]);
-      Bs.d2h_Xs();
+      if(!gpu_aware) Bs.d2h_Xs();
       rc = MPI_Isend(h_Bs_Xs, Bs.size1, MPI_DOUBLE, n1p, 1100, comm3d, &req[nreq++]);
     } else {
       // x-out physical boundary
@@ -438,7 +438,7 @@ void SendRecvBoundary(const BoundaryArray<double>& Bs,BoundaryArray<double>& Br)
     double* h_Br_Ye = Br.Ye_data;
 if (n2m != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ys, Br.size2, MPI_DOUBLE, n2m, 2100, comm3d, &req[nreq++]);
-      Bs.d2h_Ye();
+      if(!gpu_aware) Bs.d2h_Ye();
       rc = MPI_Isend(h_Bs_Ye, Bs.size2, MPI_DOUBLE, n2m, 2200, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -482,7 +482,7 @@ if (n2m != MPI_PROC_NULL) {
 
     if (n2p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ye, Br.size2, MPI_DOUBLE, n2p, 2200, comm3d, &req[nreq++]);
-      Bs.d2h_Ys();
+      if(!gpu_aware) Bs.d2h_Ys();
       rc = MPI_Isend(h_Bs_Ys, Bs.size2, MPI_DOUBLE, n2p, 2100, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -637,7 +637,7 @@ if (n2m != MPI_PROC_NULL) {
     double* h_Br_Ze = Br.Ze_data;
 if (n3m != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Zs, Br.size3, MPI_DOUBLE, n3m, 3100, comm3d, &req[nreq++]);
-      Bs.d2h_Ze();
+      if(!gpu_aware) Bs.d2h_Ze();
       rc = MPI_Isend(h_Bs_Ze, Bs.size3, MPI_DOUBLE, n3m, 3200, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -681,7 +681,7 @@ if (n3m != MPI_PROC_NULL) {
 
     if (n3p != MPI_PROC_NULL) {
       rc = MPI_Irecv(h_Br_Ze, Br.size3, MPI_DOUBLE, n3p, 3200, comm3d, &req[nreq++]);
-      Bs.d2h_Zs();
+      if(!gpu_aware) Bs.d2h_Zs();
       rc = MPI_Isend(h_Bs_Zs, Bs.size3, MPI_DOUBLE, n3p, 3100, comm3d, &req[nreq++]);
     } else {
 #if 0
@@ -755,17 +755,19 @@ if (ntiles[dir3] != 1) {
 	  }
 }
 #else
-if (ntiles[dir1] != 1) {
-	if (n1m != MPI_PROC_NULL) { Br.h2d_Xs(); }
-	if (n1p != MPI_PROC_NULL) { Br.h2d_Xe(); }
-}
-if (ntiles[dir2] != 1) {
-	if (n2m != MPI_PROC_NULL) { Br.h2d_Ys(); }
-	if (n2p != MPI_PROC_NULL) { Br.h2d_Ye(); }
-}
-if (ntiles[dir3] != 1) {
-	if (n3m != MPI_PROC_NULL) { Br.h2d_Zs(); }
-	if (n3p != MPI_PROC_NULL) { Br.h2d_Ze(); }
+if(!gpu_aware){
+	if (ntiles[dir1] != 1) {
+		if (n1m != MPI_PROC_NULL) { Br.h2d_Xs(); }
+		if (n1p != MPI_PROC_NULL) { Br.h2d_Xe(); }
+	}
+	if (ntiles[dir2] != 1) {
+		if (n2m != MPI_PROC_NULL) { Br.h2d_Ys(); }
+		if (n2p != MPI_PROC_NULL) { Br.h2d_Ye(); }
+	}
+	if (ntiles[dir3] != 1) {
+		if (n3m != MPI_PROC_NULL) { Br.h2d_Zs(); }
+		if (n3p != MPI_PROC_NULL) { Br.h2d_Ze(); }
+	}
 }
 #endif
 

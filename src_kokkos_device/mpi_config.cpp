@@ -31,6 +31,8 @@ namespace mpi_config_mod {
 
   int gpuid = -1, ngpus = 0;
 
+  bool gpu_aware = false;
+
   // ---- Initialize MPI world, split communicator, create 3D Cartesian topology ---
 
 void FinalizeMPI(){
