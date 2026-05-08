@@ -949,7 +949,7 @@ void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P){
 #endif
 }
 
-void ControlTimestep(const GridArray<double>& G){
+void ControlTimestep(const GridArray<double>& G, const FieldArray<double>& P){
   using namespace mpi_config_mod;
   const double huge = 1.0e90;
   double dtminl = huge;
@@ -977,7 +977,7 @@ void ControlTimestep(const GridArray<double>& G){
 #else
   	auto Sqr = KOKKOS_LAMBDA(double x) { return x*x; };
   	auto Norm2 = KOKKOS_LAMBDA(double x, double y, double z) { return x*x + y*y + z*z; };
-	auto P = hydflux_mod::P;
+	// auto P = hydflux_mod::P;
 	Kokkos::parallel_reduce("ControlTimestep",
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k, double& dtminloc) {
@@ -1011,9 +1011,9 @@ void ControlTimestep(const GridArray<double>& G){
   dt = 0.05e0*dtming;
 }
 
-void EvaluateCh(){
+void EvaluateCh(const FieldArray<double>& P){
   using namespace mpi_config_mod;
-  auto P = hydflux_mod::P;
+  // auto P = hydflux_mod::P;
   double chgloc = 0.0e0;
 // #pragma omp target teams distribute parallel for collapse(3) reduction(max:chgloc)
 #if 0

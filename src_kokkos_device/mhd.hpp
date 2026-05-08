@@ -313,8 +313,8 @@ namespace hydflux_mod {
   void GetNumericalFluxD(const int dir, const GridArray<double>& G,const FieldArray<double>& P,FieldArray<double> &F);
   void UpdateConservU(const GridArray<double>& G,const FieldArray<double>& Fx,const FieldArray<double>& Fy,const FieldArray<double>& Fz,FieldArray<double>& U);
   void UpdatePrimitvP(const FieldArray<double>& U,FieldArray<double>& P);
-  void ControlTimestep(const GridArray<double>& G);
-  void EvaluateCh();
+  void ControlTimestep(const GridArray<double>& G, const FieldArray<double>& P);
+  void EvaluateCh(const FieldArray<double>& P);
   void DampPsi(const GridArray<double>& G,FieldArray<double>& U);
   
 };
