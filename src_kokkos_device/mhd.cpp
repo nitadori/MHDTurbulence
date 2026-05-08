@@ -1038,10 +1038,11 @@ void EvaluateCh(const FieldArray<double>& P){
 	Kokkos::parallel_reduce("EvaluateCh",
 	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
 	KOKKOS_LAMBDA(const int i, const int j, const int k, double& chgll) {
+		double rhoinv = 1.0 / P.dev(nden,k,j,i);
 		double css = P.dev(ncsp,k,j,i)*P.dev(ncsp,k,j,i);
-		double ca1 = P.dev(nbm1,k,j,i)*P.dev(nbm1,k,j,i) / P.dev(nden,k,j,i);
-		double ca2 = P.dev(nbm2,k,j,i)*P.dev(nbm2,k,j,i) / P.dev(nden,k,j,i);
-		double ca3 = P.dev(nbm3,k,j,i)*P.dev(nbm3,k,j,i) / P.dev(nden,k,j,i);
+		double ca1 = P.dev(nbm1,k,j,i)*P.dev(nbm1,k,j,i) * rhoinv;
+		double ca2 = P.dev(nbm2,k,j,i)*P.dev(nbm2,k,j,i) * rhoinv;
+		double ca3 = P.dev(nbm3,k,j,i)*P.dev(nbm3,k,j,i) * rhoinv;
 		double cts = css + ca1 + ca2 + ca3;
 		double cm1 = sqrt((cts+sqrt(cts*cts-4.0e0*css*ca1))/2.0e0);
 		double ch1 = (std::abs(P.dev(nve1,k,j,i))+cm1);

@@ -265,12 +265,15 @@ int main(int argc, char **argv) {
     double t6 = MPI_Wtime();
 
     UpdateConservU(G,Fx,Fy,Fz,U);
+    Kokkos::fence();
     double t7 = MPI_Wtime();
 
     DampPsi(G,U);
+    Kokkos::fence();
     double t8 = MPI_Wtime();
 
     UpdatePrimitvP(U,P);
+    Kokkos::fence();
     double t9 = MPI_Wtime();
 
     time_sim += dt;
