@@ -230,24 +230,35 @@ int main(int argc, char **argv) {
   FILE *fpdt = nullptr;
   if(!myid_w) fpdt = fopen("dt.log", "w");
 
+// #define SIMPLE_PROFILING
+#ifdef SIMPLE_PROFILING
+  auto wtime = []{
+	   Kokkos::fence();
+	   return MPI_Wtime();
+  };
+#else
+  auto wtime = []{
+	  return 0.0;
+  };
+#endif
   double wt_dt=0.0, wt_bound=0.0, wt_ch=0.0, wt_flux=0.0, wt_upC=0.0, wt_dump=0.0, wt_upP=0.0;
 
   for (step=0;step<stepmax;step++){
 
-    double t0 = MPI_Wtime();
+    double t0 = wtime();
     ControlTimestep(G, P); 
-    double t1 = MPI_Wtime();
+    double t1 = wtime();
 
     // if (myid_w==0 && step%300 ==0 && ! config::benchmarkmode) printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
     if (myid_w==0 && step%10 ==0) printf("step=%i/%i time=%e dt=%e, %f%%\n",step,stepmax,time_sim,dt, time_sim/time_max*100.0);
     //printf("step=%i time=%e dt=%e\n",step,time_sim,dt);
 
-    double t2 = MPI_Wtime();
+    double t2 = wtime();
     SetBoundaryCondition(P,Bs,Br);
-    double t3 = MPI_Wtime();
+    double t3 = wtime();
 
     EvaluateCh(P);
-    double t4 = MPI_Wtime();
+    double t4 = wtime();
 
     if(fpdt && step<100){
 	    fprintf(fpdt, "step=%d, time=%e, dt=%e, chg=%e\n", step, time_sim, dt, chg);
@@ -257,24 +268,20 @@ int main(int argc, char **argv) {
 	    fpdt = nullptr;
     }
 
-    double t5 = MPI_Wtime();
+    double t5 = wtime();
     GetNumericalFluxD(1, G,P,Fx);
     GetNumericalFluxD(2, G,P,Fy);
     GetNumericalFluxD(3, G,P,Fz);
-    Kokkos::fence();
-    double t6 = MPI_Wtime();
+    double t6 = wtime();
 
     UpdateConservU(G,Fx,Fy,Fz,U);
-    Kokkos::fence();
-    double t7 = MPI_Wtime();
+    double t7 = wtime();
 
     DampPsi(G,U);
-    Kokkos::fence();
-    double t8 = MPI_Wtime();
+    double t8 = wtime();
 
     UpdatePrimitvP(U,P);
-    Kokkos::fence();
-    double t9 = MPI_Wtime();
+    double t9 = wtime();
 
     time_sim += dt;
 
@@ -303,7 +310,9 @@ int main(int argc, char **argv) {
   if (myid_w == 0) printf("exiting main loop time=%e, step=%i\n",time_sim,step);
   if (myid_w == 0) printf("sim time [s]: %e\n", elapsed.count());
   if (myid_w == 0) printf("time/count/cell : %e\n", elapsed.count()/(ngrid1*ngrid2*ngrid3)/(step+1));
+#ifdef SIMPLE_PROFILING
   if (myid_w == 0) printf("%e %e %e %e %e %e %e\n", wt_dt, wt_bound, wt_ch, wt_flux, wt_upC, wt_dump, wt_upP);
+#endif
 
   // Force final output (Fortran: is_final=.true.; call Output(forceoutput))
   Output(forceoutput);
