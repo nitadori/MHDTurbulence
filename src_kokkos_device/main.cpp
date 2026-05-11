@@ -231,13 +231,12 @@ int main(int argc, char **argv) {
   if(!myid_w) fpdt = fopen("dt.log", "w");
 
 // #define SIMPLE_PROFILING
+  auto wtime = []{
 #ifdef SIMPLE_PROFILING
-  auto wtime = []{
-	   Kokkos::fence();
-	   return MPI_Wtime();
-  };
+	  Kokkos::fence();
+	  MPI_Barrier(MPI_COMM_WORLD);
+	  return MPI_Wtime();
 #else
-  auto wtime = []{
 	  return 0.0;
   };
 #endif
