@@ -993,12 +993,12 @@ void ControlTimestep(const GridArray<double>& G, const FieldArray<double>& P){
 		  });
 	  dtminloc = std::fmin(dtminloc, dt);
 #else
-	  dtminloc = Kokkos::fmin(
-			  Kokkos::fmin(dtminloc, 
-				       (G.dev_x1a(i+1)-G.dev_x1a(i))/(std::abs(P.dev(nve1,k,j,i))+ctot)),
-			  Kokkos::fmin((G.dev_x2a(j+1)-G.dev_x2a(j))/(std::abs(P.dev(nve2,k,j,i))+ctot),
-				       (G.dev_x3a(k+1)-G.dev_x3a(k))/(std::abs(P.dev(nve3,k,j,i))+ctot))
-			  );
+	  dtminloc = Kokkos::min({
+			  dtminloc, 
+			  (G.dev_x1a(i+1)-G.dev_x1a(i))/(std::abs(P.dev(nve1,k,j,i))+ctot),
+			  (G.dev_x2a(j+1)-G.dev_x2a(j))/(std::abs(P.dev(nve2,k,j,i))+ctot),
+			  (G.dev_x3a(k+1)-G.dev_x3a(k))/(std::abs(P.dev(nve3,k,j,i))+ctot)
+		  });
 #endif
 	},
 	Kokkos::Min<double>(dtminl)
@@ -1051,13 +1051,7 @@ void EvaluateCh(const FieldArray<double>& P){
 		double cm3 = sqrt((cts+sqrt(cts*cts-4.0e0*css*ca3))/2.0e0);
 		double ch3 = (std::abs(P.dev(nve3,k,j,i))+cm3);
 
-#if 0
-		chgll = std::max({chgll,ch1,ch2,ch3});
-#else
-		chgll = Kokkos::fmax(
-				Kokkos::fmax(chgll, ch1),
-				Kokkos::fmax(ch2, ch3));
-#endif
+		chgll = Kokkos::max({chgll, ch1, ch2, ch3});
 	},
 	Kokkos::Max<double>(chgloc)
 	);
