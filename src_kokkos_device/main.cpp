@@ -23,7 +23,7 @@
 #include "output.hpp"
 #include "main.hpp"
 
-static void RealTimeAnalysis() {
+static void RealTimeAnalysis(const GridArray<double>& G, const FieldArray<double>& P) {
   using namespace resolution_mod;
   using namespace hydflux_mod;
   using namespace mpi_config_mod;
@@ -32,6 +32,7 @@ static void RealTimeAnalysis() {
   double avevy = 0.0;
   double vol = 0.0;
 
+#if 0
 // #pragma omp target teams distribute parallel for collapse(3) reduction(+:vol,mix,avevy)
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
@@ -43,6 +44,17 @@ static void RealTimeAnalysis() {
       }
     }
   }
+#else
+	Kokkos::parallel_reduce("RealTimeAnalysis",
+	Kokkos::MDRangePolicy<Kokkos::Rank<3>>({is, js, ks}, {ie+1, je+1, ke+1}),
+	KOKKOS_LAMBDA(const int i, const int j, const int k, double &lmix, double &lavevy, double &lvol) {
+		const double dv = (G.dev_x1a(i+1)-G.dev_x1a(i)) * (G.dev_x2a(j+1)-G.dev_x2a(j)) * (G.dev_x3a(k+1)-G.dev_x3a(k));
+		lvol += dv;
+		lmix += P.dev(nst,k,j,i) * (1.0 - P.dev(nst,k,j,i)) * dv;
+		lavevy += P.dev(nve2,k,j,i) * P.dev(nve2,k,j,i) * dv;
+	},
+	mix, avevy, vol);
+#endif
 
   double local[3] = {vol, mix, avevy};
   double global[3] = {0.0, 0.0, 0.0};
@@ -267,7 +279,7 @@ int main(int argc, char **argv) {
   G.h2d();
   P.h2d();
   U.h2d();
-  RealTimeAnalysis(); // currently on the host
+  RealTimeAnalysis(G, P); // currently on the host
   // Force output at the initial state (Fortran: call Output(forceoutput))
   Output(forceoutput);
 
@@ -363,7 +375,7 @@ int main(int argc, char **argv) {
 
   // Force final output (Fortran: is_final=.true.; call Output(forceoutput))
   Output(forceoutput);
-  RealTimeAnalysis();
+  RealTimeAnalysis(G, P);
   //if (!nooutput) Output1D(forceoutput);
   
   if (myid_w == 0) printf("program has been finished\n");
