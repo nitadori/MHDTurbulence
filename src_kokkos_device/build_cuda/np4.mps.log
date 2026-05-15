@@ -1,0 +1,7 @@
+step=1000/600000 time=1.512912e-01 dt=1.512854e-04, 1.008608%
+exiting main loop time=1.514425e-01, step=1000
+sim time [s]: 4.583064e+00
+time/count/cell : 5.426354e-09
+1.924897e-01 3.001954e-01 1.939323e-01 2.993667e+00 5.425188e-01 5.218729e-02 2.990314e-01
+output index=1, time=1.514425e-01
+program has been finished

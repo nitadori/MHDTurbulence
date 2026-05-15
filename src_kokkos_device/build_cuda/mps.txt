@@ -1,0 +1,7 @@
+ノード内4プロセスならMPSを上げておくと速くなります
+
+起動
+nvidia-cuda-mps-control -d
+
+終了
+echo quit | nvidia-cuda-mps-control

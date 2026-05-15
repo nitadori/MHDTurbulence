@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
   FILE *fpdt = nullptr;
   if(!myid_w) fpdt = fopen("dt.log", "w");
 
-// #define SIMPLE_PROFILING
+#define SIMPLE_PROFILING
   auto wtime = []{
 #ifdef SIMPLE_PROFILING
 	  Kokkos::fence();
@@ -238,8 +238,8 @@ int main(int argc, char **argv) {
 	  return MPI_Wtime();
 #else
 	  return 0.0;
-  };
 #endif
+  };
   double wt_dt=0.0, wt_bound=0.0, wt_ch=0.0, wt_flux=0.0, wt_upC=0.0, wt_dump=0.0, wt_upP=0.0;
 
   for (step=0;step<stepmax;step++){
