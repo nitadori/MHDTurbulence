@@ -1067,9 +1067,6 @@ void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
   const double alphabp = 0.1e0;
   auto chg = hydflux_mod::chg;
   auto dt = resolution_mod::dt;
-  auto fmin3 = KOKKOS_LAMBDA(double x, double y, double z){
-	  return Kokkos::fmin(x, Kokkos::fmin(y, z));
-  };
 #if 0
 // #pragma omp target teams distribute parallel for collapse(3)
   for (int k=ks; k<=ke; k++)
@@ -1090,7 +1087,7 @@ void DampPsi(const GridArray<double>& G,FieldArray<double>& U){
 		double dy = G.dev_x2a(j+1)-G.dev_x2a(j);
 		double dz = G.dev_x3a(k+1)-G.dev_x3a(k);
 
-		double dhl = fmin3(dx, dy, dz);
+		double dhl = Kokkos::min({dx, dy, dz});
 		double taui = alphabp * chg/dhl;
 		U.dref(mbps,k,j,i) = U.dev(mbps,k,j,i) * (1.0e0-dt*taui);
 	});
