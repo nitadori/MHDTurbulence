@@ -99,4 +99,12 @@ void MPImaxfind(const double& vin,const int& locin, double& vout, int& locout) {
     vout  = out_.v;
   locout  = out_.loc;
 }
+
+void GetMPIsum(int n, const double* bufl, double* bufg) {
+  if (ntiles[dir1] * ntiles[dir2] * ntiles[dir3] != 1) {
+    MPI_Allreduce(bufl, bufg, n, MPI_DOUBLE, MPI_SUM, comm3d);
+  } else {
+    for (int i = 0; i < n; ++i) bufg[i] = bufl[i];
+  }
+}
 };
